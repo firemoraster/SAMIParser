@@ -712,10 +712,12 @@ bot.on('callback_query', async (query) => {
   if (data === 'request_access') {
     await bot.editMessageText('⏳ Запит надіслано адміністраторам...', { chat_id: chatId, message_id: query.message.message_id });
 
+    // Спроба повідомити всіх адміністраторів — логування невдалих відправок
+    const failedAdmins = [];
     for (const adminId of ADMIN_IDS) {
       try {
-        await bot.sendMessage(adminId, 
-          `🔔 *Новий запит!*\n\n👤 ${user.first_name} (@${user.username || 'no_user'})\n🆔 \`${user.id}\``, 
+        await bot.sendMessage(adminId,
+          `🔔 *Новий запит!*\n\n👤 ${user.first_name} (@${user.username || 'no_user'})\n🆔 \`${user.id}\``,
           {
             parse_mode: 'Markdown',
             reply_markup: {
@@ -728,7 +730,25 @@ bot.on('callback_query', async (query) => {
             }
           }
         );
-      } catch (e) {}
+      } catch (e) {
+        // Логування для діагностики (напр., блокування бота, помилка мережі або невірний ID)
+        console.error(`[Admin notify] Failed to send request to admin ${adminId}:`, e?.response?.data || e.message || e);
+        failedAdmins.push(adminId);
+      }
+    }
+
+    // Зворотний зв'язок для користувача, щоб знати, чи повідомлення дійшло
+    try {
+      if (failedAdmins.length === ADMIN_IDS.length) {
+        await bot.sendMessage(chatId, '❌ Не вдалося надіслати запит адміністраторам. Будь ласка, перевірте, чи адміністратори почали діалог з ботом та чи їхні ID вказані вірно.');
+      } else if (failedAdmins.length > 0) {
+        await bot.sendMessage(chatId, `⚠️ Запит надіслано, але деякі адміністратори не отримали повідомлення: ${failedAdmins.join(', ')}.`);
+      } else {
+        // все успішно — можна нічого не робити або залишити коротке підтвердження
+        await bot.sendMessage(chatId, '✅ Запит відправлено адміністраторам. Чекайте на відповідь.');
+      }
+    } catch (e) {
+      console.error('[Feedback] Не вдалося надіслати повідомлення-зворотній звязок користувачу:', e?.response?.data || e.message || e);
     }
   }
 
