@@ -100,6 +100,15 @@ const extractEmail = (text) => {
   return match ? match[0] : null;
 };
 
+// Безпечне екранування для parse_mode='HTML'
+const escapeHtml = (str) => {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+};
+
 const getProgressBar = (current, total) => {
   const percentage = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
   const filledLength = Math.round((percentage / 10)); 
@@ -716,10 +725,14 @@ bot.on('callback_query', async (query) => {
     const failedAdmins = [];
     for (const adminId of ADMIN_IDS) {
       try {
+        const safeName = escapeHtml(user.first_name || '');
+        const safeUsername = user.username ? '@' + escapeHtml(user.username) : 'no_user';
+        const safeId = escapeHtml(user.id);
+
         await bot.sendMessage(adminId,
-          `🔔 *Новий запит!*\n\n👤 ${user.first_name} (@${user.username || 'no_user'})\n🆔 \`${user.id}\``,
+          `🔔 <b>Новий запит!</b>\n\n👤 ${safeName} (${safeUsername})\n🆔 <code>${safeId}</code>`,
           {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
                 [
