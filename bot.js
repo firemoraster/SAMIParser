@@ -302,19 +302,18 @@ const getUserIdFromUsername = async (username) => {
   return result.user.id;
 }
 
-// МОДИФІКОВАНИЙ ФЕТЧЕР З ЛІМІТОМ
+// ФУНКЦІЯ ДЛЯ ОТРИМАННЯ ПІДПИСНИКІВ (FOLLOWERS)
 const getAllFollowers = async (id, limitAmount) => {
   let next_max_id = null;
   let hasMore = true;
   const ids = [];
 
   while (hasMore) {
-    // Перевірка ліміту, щоб не банили за зайві запити
     if (ids.length >= limitAmount) break;
 
     try {
         const response = await axios.get(
-          `https://www.instagram.com/api/v1/friendships/${id}/following/?count=200${next_max_id ? `&max_id=${next_max_id}` : ''}`,
+          `https://www.instagram.com/api/v1/friendships/${id}/followers/?count=200${next_max_id ? `&max_id=${next_max_id}` : ''}`,
           {
             headers: {
               'accept': '*/*',
@@ -322,7 +321,7 @@ const getAllFollowers = async (id, limitAmount) => {
               'cookie': 'ig_did=38D527BA-DD52-4034-A15D-021C637C145D; ig_nrcb=1; datr=F0V8Z4tJEDXzUwMKLnXPzQrh; ds_user_id=18992364034; csrftoken=oYY6Tkt9TxFg9Wxl9ElfnXPmExJXyY1u; ps_l=1; ps_n=1; mid=aGzR7wAEAAE5s66SP_Ub17hSBBcL; sessionid=18992364034%3AG2OqY11JfOr7TG%3A11%3AAYhCWu5mOAzXojXdLhN1XwN2VLMizsNx5Y9Guc3RS8M; wd=915x962; rur="CLN\\05418992364034\\0541793822047:01fe8567b846c70d8350d6ca5a66944fa085c28c68ea83e3dda1a3677d44bb1e3c3cc83d"',
               'dnt': '1',
               'priority': 'u=1, i',
-              'referer': 'https://www.instagram.com/ssolovei_/following/',
+              'referer': `https://www.instagram.com/${id}/followers/`,
               'sec-ch-prefers-color-scheme': 'dark',
               'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
               'sec-ch-ua-full-version-list': '"Google Chrome";v="141.0.7390.123", "Not?A_Brand";v="8.0.0.0", "Chromium";v="141.0.7390.123"',
@@ -345,15 +344,63 @@ const getAllFollowers = async (id, limitAmount) => {
         ids.push(...response.data.users.map(item => item.id));
         hasMore = response.data.has_more;
         next_max_id = response.data.next_max_id;
-        // Динамічна пауза між сторінками
         await randomSleep(500, 1200);
     } catch (e) {
-        // Якщо сторінка не вантажиться, просто зупиняємося і віддаємо що є
         hasMore = false;
     }
   }
 
-  // Повертаємо тільки потрібну кількість
+  return ids.slice(0, limitAmount);
+}
+
+// ФУНКЦІЯ ДЛЯ ОТРИМАННЯ ПІДПИСОК (FOLLOWING)
+const getAllFollowing = async (id, limitAmount) => {
+  let next_max_id = null;
+  let hasMore = true;
+  const ids = [];
+
+  while (hasMore) {
+    if (ids.length >= limitAmount) break;
+
+    try {
+        const response = await axios.get(
+          `https://www.instagram.com/api/v1/friendships/${id}/following/?count=200${next_max_id ? `&max_id=${next_max_id}` : ''}`,
+          {
+            headers: {
+              'accept': '*/*',
+              'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,uk;q=0.7',
+              'cookie': 'ig_did=38D527BA-DD52-4034-A15D-021C637C145D; ig_nrcb=1; datr=F0V8Z4tJEDXzUwMKLnXPzQrh; ds_user_id=18992364034; csrftoken=oYY6Tkt9TxFg9Wxl9ElfnXPmExJXyY1u; ps_l=1; ps_n=1; mid=aGzR7wAEAAE5s66SP_Ub17hSBBcL; sessionid=18992364034%3AG2OqY11JfOr7TG%3A11%3AAYhCWu5mOAzXojXdLhN1XwN2VLMizsNx5Y9Guc3RS8M; wd=915x962; rur="CLN\\05418992364034\\0541793822047:01fe8567b846c70d8350d6ca5a66944fa085c28c68ea83e3dda1a3677d44bb1e3c3cc83d"',
+              'dnt': '1',
+              'priority': 'u=1, i',
+              'referer': `https://www.instagram.com/${id}/following/`,
+              'sec-ch-prefers-color-scheme': 'dark',
+              'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
+              'sec-ch-ua-full-version-list': '"Google Chrome";v="141.0.7390.123", "Not?A_Brand";v="8.0.0.0", "Chromium";v="141.0.7390.123"',
+              'sec-ch-ua-mobile': '?0',
+              'sec-ch-ua-model': '""',
+              'sec-ch-ua-platform': '"macOS"',
+              'sec-ch-ua-platform-version': '"26.0.1"',
+              'sec-fetch-dest': 'empty',
+              'sec-fetch-mode': 'cors',
+              'sec-fetch-site': 'same-origin',
+              'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+              'x-asbd-id': '359341',
+              'x-csrftoken': 'oYY6Tkt9TxFg9Wxl9ElfnXPmExJXyY1u',
+              'x-ig-app-id': '936619743392459',
+              'x-web-session-id': '8qqznb:7gjo7n:hmve9m'
+            }
+          }
+        );
+
+        ids.push(...response.data.users.map(item => item.id));
+        hasMore = response.data.has_more;
+        next_max_id = response.data.next_max_id;
+        await randomSleep(500, 1200);
+    } catch (e) {
+        hasMore = false;
+    }
+  }
+
   return ids.slice(0, limitAmount);
 }
 
@@ -463,7 +510,7 @@ const getPosts = async (username, { count = 12, includeReelMediaSeenTimestamp = 
     __hsi: '7571169926051092580',
     __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2swlo8od8-U2zxe2GewGw9a361qwuEjUlwhEe87q0oa2-azqwt8d-2u2J0bS1LwTwKG1pg2fwxyo6O1FwlA3a3zhA6bwIxeUnAwCAxW1oxe6UaU3cyVrx60hK16wOwgV84q2i',
     __csr: 'g9Yr7jOOqFNisl7vZWn9HGAz9WFAFGQJszChoxKh-WACy6598hBqyaAGlvGmAVrmFpfF6KpyIxdBTXWhUGAU-4ucADDGbzAnKq_J1a9Gb9BJbK9Cz8SZanK3UCmp6AzVAdWXy_UjV8ym4WhWGey8kCtAKqF9EFai78S2B11eit4K7ElzrjDhES6Vo-8Dw05B0zoGUug5d0Kwnm08fCt0wK0R4_AQEgF1q0a0Uao2dwKgrxq0pW0eBweWE0-WEjg1XA264jwBwhZ1-p0Cx68Q0JojwJxe0sKuE5-6UeUng7O0OUgycw1e1816U2AL9wh60f32qwFmq296sg0oS78sw0oSU0Wy0G83Ew2KS097w0Q8whU',
-    __hsdp: 'geQ6AGY4VWAk4MaiJi6CHni4H9yjbywjeh9344UYsdxyEabe9da1q53y5B40gEvwywhC98q1rxe2SA8xGEgpO2FEnwnp8iiyzw9a2-12w-zE5i9zE5q5bw8-10yVEGvwwxXxG32323OdwIxC2Wi0r-0kGq0oS1cwPw5Zw4wBwr8bo6e7o6G1bw6cwcm1Qw22o622x05_wk8fo5gw32xm0DE',
+    __hsdp: 'geQ6AGY4VWAk4MaiJi6CHni4H9yjbywjeh9344UYsdxyEabe9da1q53y5B40gETmUyERy9E4pyi6wmUJBx51GA8xGEgpO2FEnwnp8iiyzw9a2-12w-zE5i9zE5q5bw8-10yVEGvwwxXxG32323OdwIxC2Wi0r-0kGq0oS1cwPw5Zw4wBwr8bo6e7o6G1bw6cwcm1Qw22o622x05_wk8fo5gw32xm0DE',
     __hblp: '0vEfE26z8fUO0To2SwFzo8Ed8uzE4KUKdwLmp1S6d39e5Uqw_mifgKewJwo9Epy9oK3p0ZzEgx-m6SvzEW698aok-0z5wGxmVuqaDU88S4ebzEc8c8f8S2iu6odo2Rwxwem0AE2TCCw66wj8cU9829wa-7EfE3jzpo6O2S3y2G48O363y1bxu781lU35wt86a0qq7EaEmK2h2Elw820w85uQay8gyUvwZCwNK5O1e484y1kxm1swgo',
     __sjsp: 'geQ65OHOgh7Ghgj0F8hi6CHni4H9yjbywjehadg8NMS6awIxt0n1g',
     __comet_req: '7',
@@ -537,7 +584,7 @@ const getPosts = async (username, { count = 12, includeReelMediaSeenTimestamp = 
 
 const processSingleUser = async (id, min, max) => {
   try {
-    await randomSleep(300, 1200); // Збільшив затримку для стабільності
+    await randomSleep(300, 1200);
 
     const user = await getUserById(id);
     const followerCount = user.follower_count;
@@ -568,7 +615,6 @@ const processSingleUser = async (id, min, max) => {
     }
     return null;
   } catch (e) {
-    // Ігноруємо помилки окремих юзерів
     return null;
   }
 };
@@ -578,7 +624,6 @@ const mapFollowers = async ({ ids, limit: processLimit, min, max }, onProgress) 
   const total = Math.min(ids.length, processLimit);
   let processedCount = 0;
 
-  // Створюємо список завдань, але не більше ліміту
   const tasks = ids.slice(0, total).map((id) => {
     return limit(async () => {
       const data = await processSingleUser(id, min, max);
@@ -721,7 +766,6 @@ bot.on('callback_query', async (query) => {
   if (data === 'request_access') {
     await bot.editMessageText('⏳ Запит надіслано адміністраторам...', { chat_id: chatId, message_id: query.message.message_id });
 
-    // Спроба повідомити всіх адміністраторів — логування невдалих відправок
     const failedAdmins = [];
     for (const adminId of ADMIN_IDS) {
       try {
@@ -744,20 +788,17 @@ bot.on('callback_query', async (query) => {
           }
         );
       } catch (e) {
-        // Логування для діагностики (напр., блокування бота, помилка мережі або невірний ID)
         console.error(`[Admin notify] Failed to send request to admin ${adminId}:`, e?.response?.data || e.message || e);
         failedAdmins.push(adminId);
       }
     }
 
-    // Зворотний зв'язок для користувача, щоб знати, чи повідомлення дійшло
     try {
       if (failedAdmins.length === ADMIN_IDS.length) {
         await bot.sendMessage(chatId, '❌ Не вдалося надіслати запит адміністраторам. Будь ласка, перевірте, чи адміністратори почали діалог з ботом та чи їхні ID вказані вірно.');
       } else if (failedAdmins.length > 0) {
         await bot.sendMessage(chatId, `⚠️ Запит надіслано, але деякі адміністратори не отримали повідомлення: ${failedAdmins.join(', ')}.`);
       } else {
-        // все успішно — можна нічого не робити або залишити коротке підтвердження
         await bot.sendMessage(chatId, '✅ Запит відправлено адміністраторам. Чекайте на відповідь.');
       }
     } catch (e) {
@@ -796,14 +837,52 @@ bot.on('callback_query', async (query) => {
   // Старт парсингу
   else if (data === 'start_parsing') {
     if (!hasAccess(chatId)) return;
-    userStates.set(chatId, { step: 'usernames' });
-    await bot.sendMessage(chatId, `✍️ *Крок 1/2*\nВведи нікнейми через кому:\n_(напр. zelenskyy, emrata)_`, { parse_mode: 'Markdown' });
+    
+    // Додаємо вибір типу парсингу
+    bot.sendMessage(chatId, `🔍 *Оберіть тип парсингу:*`, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '👥 Підписники (Followers)', callback_data: 'parse_followers' }],
+          [{ text: '📋 Підписки (Following)', callback_data: 'parse_following' }]
+        ]
+      }
+    });
+    bot.answerCallbackQuery(query.id);
+  }
+  
+  // Вибір типу парсингу
+  else if (data === 'parse_followers' || data === 'parse_following') {
+    if (!hasAccess(chatId)) return;
+    
+    userStates.set(chatId, { 
+      step: 'usernames', 
+      parseType: data === 'parse_followers' ? 'followers' : 'following' 
+    });
+    
+    const typeText = data === 'parse_followers' ? 'підписників' : 'підписок';
+    
+    await bot.sendMessage(chatId, 
+      `👥 *Парсинг ${typeText}*\n\n` +
+      `✍️ *Крок 1/2*\nВведи нікнейми через кому:\n_(напр. zelenskyy, emrata)_`, 
+      { parse_mode: 'Markdown' }
+    );
     bot.answerCallbackQuery(query.id);
   }
   
   // Довідка
   else if (data === 'user_guide') {
-    bot.sendMessage(chatId, `📚 *Гайд:*\n1. Натисніть "Почати".\n2. Введіть нікнейми.\n3. Вкажіть мін. підписників.\n4. Бот надішле файл після кожного акаунта.`, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, 
+      `📚 *Гайд:*\n\n` +
+      `1. Натисніть "Почати"\n` +
+      `2. Оберіть тип парсингу:\n` +
+      `   • 👥 Підписники - ті, хто підписаний на акаунт\n` +
+      `   • 📋 Підписки - ті, на кого підписаний акаунт\n` +
+      `3. Введіть нікнейми\n` +
+      `4. Вкажіть мін. підписників\n` +
+      `5. Бот надішле файл після кожного акаунта`, 
+      { parse_mode: 'Markdown' }
+    );
     bot.answerCallbackQuery(query.id);
   }
   else if (data === 'admin_help') {
@@ -831,8 +910,12 @@ bot.on('message', async (msg) => {
 
         state.usernames = usernames;
         state.step = 'min_followers';
+        
+        const typeText = state.parseType === 'followers' ? 'підписників' : 'підписок';
+        
         await bot.sendMessage(chatId, 
-            `✅ Прийнято: **${usernames.length}** акаунтів.\n\n` +
+            `✅ Прийнято: **${usernames.length}** акаунтів.\n` +
+            `📊 Тип: **${typeText}**\n\n` +
             `✍️ *Крок 2/2*\n` +
             `Вкажіть **мінімальну** кількість підписників (напр. 1000):`, 
             { parse_mode: 'Markdown' });
@@ -872,34 +955,39 @@ async function startScrapingProcess(chatId, config) {
     for (let i = 0; i < config.usernames.length; i++) {
         const currentUsername = config.usernames[i];
         
-        // Блок try/catch для ізоляції помилок (щоб 403 не зупиняв весь процес)
         try {
             await bot.editMessageText(
                 `📡 **SAMIParser Active**\n` +
                 `━━━━━━━━━━━━\n` +
                 `📂 Джерело [${i+1}/${config.usernames.length}]: \`${currentUsername}\`\n` +
+                `👥 Тип: ${config.parseType === 'followers' ? 'Підписники' : 'Підписки'}\n` +
                 `⏳ Отримую метадані...`, 
                 { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown' }
             );
 
             const targetId = await getUserIdFromUsername(currentUsername);
             
-            // Передаємо ліміт, щоб не качати зайвого
-            const allIds = await getAllFollowers(targetId, config.limit);
+            // ВИБІР ФУНКЦІЇ В ЗАЛЕЖНОСТІ ВІД ТИПУ ПАРСИНГУ
+            let allIds = [];
+            if (config.parseType === 'followers') {
+                allIds = await getAllFollowers(targetId, config.limit);
+            } else {
+                allIds = await getAllFollowing(targetId, config.limit);
+            }
             
             if (allIds.length === 0) {
-               await bot.sendMessage(chatId, `⚠️ Помилка з \`${currentUsername}\`: Не вдалося отримати підписників.`);
+               await bot.sendMessage(chatId, `⚠️ Помилка з \`${currentUsername}\`: Не вдалося отримати ${config.parseType === 'followers' ? 'підписників' : 'підписки'}.`);
                continue; 
             }
 
-            // Розумний ліміт: беремо менше з двох (знайдено або ліміт)
             const toCheck = Math.min(allIds.length, config.limit);
 
             await bot.editMessageText(
               `📡 **SAMIParser Active**\n` +
               `━━━━━━━━━━━━\n` +
               `📂 Джерело: \`${currentUsername}\`\n` +
-              `👥 Знайдено: ${allIds.length}\n` +
+              `👥 Тип: ${config.parseType === 'followers' ? 'Підписники' : 'Підписки'}\n` +
+              `🔢 Знайдено: ${allIds.length}\n` +
               `🎯 Ціль: ${toCheck} перевірок\n` +
               `🚀 *Запуск двигунів...*`, 
               { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown' }
@@ -908,13 +996,13 @@ async function startScrapingProcess(chatId, config) {
             let lastUpdate = Date.now();
             const progressCallback = async (current, total, activeUser) => {
                 const now = Date.now();
-                // Оновлюємо статус не частіше ніж раз на 2.5 сек, щоб не отримати бан від Телеграму
                 if (now - lastUpdate > 2500 || current === total) {
                     try {
                         await bot.editMessageText(
                             `📡 **SAMIParser Active**\n` +
                             `━━━━━━━━━━━━\n` +
                             `📂 Джерело: \`${currentUsername}\`\n` +
+                            `👥 Тип: ${config.parseType === 'followers' ? 'Підписники' : 'Підписки'}\n` +
                             `👤 Аналіз: \`${activeUser}\`\n` +
                             `${getProgressBar(current, total)}\n` +
                             `🔢 Оброблено: ${current}/${total}\n` +
@@ -930,20 +1018,29 @@ async function startScrapingProcess(chatId, config) {
                 ids: allIds, limit: toCheck, min: config.min, max: config.max 
             }, progressCallback);
 
-            // Сортування результатів
             accountResults.sort((a, b) => b.rawAverage - a.rawAverage);
 
             if (accountResults.length === 0) {
-                 await bot.sendMessage(chatId, `❌ По \`${currentUsername}\` нічого не знайдено (0 лідів).`, { parse_mode: 'Markdown' });
+                 await bot.sendMessage(chatId, 
+                    `❌ По \`${currentUsername}\` нічого не знайдено (0 лідів).\n` +
+                    `Тип: ${config.parseType === 'followers' ? 'підписники' : 'підписки'}`, 
+                    { parse_mode: 'Markdown' }
+                 );
             } else {
-                await bot.editMessageText(`💾 *Формую звіт для ${currentUsername}...* (Всього: ${accountResults.length})`, { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown' });
+                await bot.editMessageText(
+                    `💾 *Формую звіт для ${currentUsername}...*\n` +
+                    `Тип: ${config.parseType === 'followers' ? 'підписники' : 'підписки'}\n` +
+                    `Всього: ${accountResults.length}`, 
+                    { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown' }
+                );
                 
-                const filename = await saveToXlsx(accountResults, currentUsername);
+                const filename = await saveToXlsx(accountResults, `${currentUsername}_${config.parseType}`);
 
                 if (filename) {
                     const fileBuffer = await fs.readFile(filename);
                     await bot.sendDocument(chatId, fileBuffer, {
                         caption: `✅ *Звіт по ${currentUsername}*\n` +
+                                 `👥 Тип: ${config.parseType === 'followers' ? 'Підписники' : 'Підписки'}\n` +
                                  `💎 Знайдено: **${accountResults.length}**\n` +
                                  `📊 Фільтр: >${formatNumber(config.min)}`,
                         parse_mode: 'Markdown'
@@ -954,8 +1051,12 @@ async function startScrapingProcess(chatId, config) {
             }
 
         } catch (accError) {
-            // ТУТ ЛОВИМО 403 ПОМИЛКУ, ПИШЕМО ПРО НЕЇ І ЙДЕМО ДАЛІ
-            await bot.sendMessage(chatId, `⚠️ Критична помилка з \`${currentUsername}\`: ${accError.message}. Переходжу до наступного...`, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, 
+                `⚠️ Критична помилка з \`${currentUsername}\`:\n${accError.message}\n` +
+                `Тип: ${config.parseType === 'followers' ? 'підписники' : 'підписки'}\n` +
+                `Переходжу до наступного...`, 
+                { parse_mode: 'Markdown' }
+            );
         }
     }
 
