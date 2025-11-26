@@ -84,6 +84,26 @@ const isAdmin = (userId) => {
 loadUsers();
 
 // ==========================================
+// 📋 НАЛАШТУВАННЯ МЕНЮ КОМАНД
+// ==========================================
+
+const setupBotMenu = async () => {
+  try {
+    await bot.setMyCommands([
+      { command: 'start', description: '🚀 Почати роботу' },
+      { command: 'admin', description: '🛡️ Адмін-панель' },
+      { command: 'id', description: '🆔 Мій chat ID' },
+      { command: 'help', description: '📚 Гайд' }
+    ]);
+    console.log('✅ [SYSTEM] Меню команд встановлено.');
+  } catch (err) {
+    console.error('❌ Помилка встановлення меню:', err.message);
+  }
+};
+
+setupBotMenu();
+
+// ==========================================
 // 🛠 УТИЛІТИ
 // ==========================================
 
@@ -704,18 +724,25 @@ const saveToXlsx = async (result, baseFilename) => {
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   
+  // Створюємо кастомну клавіатуру
+  const customKeyboard = {
+    keyboard: [
+      ['👥 Парсинг підписників', '📋 Парсинг підписок'],
+      ['🛡️ Адмін-панель', '📚 Довідка'],
+      ['🆔 Мій ID']
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false
+  };
+
   if (hasAccess(chatId)) {
     bot.sendMessage(chatId, 
       `👋 *Привіт! SAMIParser активний.*\n\n` +
-      `Готовий шукати цільову аудиторію.`, 
+      `Готовий шукати цільову аудиторію.\n\n` +
+      `_Оберіть дію з меню нижче:_`, 
       {
         parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🚀 Почати Парсинг', callback_data: 'start_parsing' }],
-            [{ text: '📚 Гайд', callback_data: 'user_guide' }]
-          ]
-        }
+        reply_markup: customKeyboard
       }
     );
   } else {
@@ -754,6 +781,181 @@ bot.onText(/\/admin/, (msg) => {
     parse_mode: 'Markdown',
     reply_markup: { inline_keyboard: userButtons }
   });
+});
+
+// Команда /id
+bot.onText(/\/id/, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 
+    `🆔 <b>Ваш Chat ID:</b>\n<code>${chatId}</code>\n\n` +
+    `<i>Скопіюйте цей ID, якщо потрібно додати вас до бота.</i>`,
+    { parse_mode: 'HTML' }
+  );
+});
+
+// Команда /help
+bot.onText(/\/help/, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 
+    `📚 <b>Гайд SAMIParser</b>\n\n` +
+    `<b>Як користуватися:</b>\n` +
+    `1️⃣ Натисніть /start щоб почати\n` +
+    `2️⃣ Оберіть тип парсингу (підписники або підписки)\n` +
+    `3️⃣ Введіть нікнейми через кому\n` +
+    `4️⃣ Вкажіть мінімальну кількість підписників\n` +
+    `5️⃣ Бот надішле файл з результатами\n\n` +
+    `<b>Доступні команди:</b>\n` +
+    `/start - Почати роботу\n` +
+    `/help - Цей гайд\n` +
+    `/id - Показати ваш Chat ID\n` +
+    `/admin - Адмін-панель\n\n` +
+    `<b>Потрібна допомога?</b>\n` +
+    `Напишіть адміністратору.`,
+    { parse_mode: 'HTML' }
+  );
+});
+
+// Окрема функція для обробки кроків парсингу
+function handleParsingSteps(msg) {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  if (!text || text.startsWith('/')) return;
+  if (!hasAccess(chatId)) return;
+
+  const state = userStates.get(chatId);
+  if (!state) return;
+
+  try {
+    switch (state.step) {
+      case 'usernames':
+        const usernames = text.split(',').map(u => u.trim().replace('@', '')).filter(Boolean);
+        if (usernames.length === 0) return bot.sendMessage(chatId, '⚠️ Введіть хоча б один нік.');
+
+        state.usernames = usernames;
+        state.step = 'min_followers';
+        
+        const typeText = state.parseType === 'followers' ? 'підписників' : 'підписок';
+        
+        bot.sendMessage(chatId, 
+            `✅ Прийнято: **${usernames.length}** акаунтів.\n` +
+            `📊 Тип: **${typeText}**\n\n` +
+            `✍️ *Крок 2/2*\n` +
+            `Вкажіть **мінімальну** кількість підписників (напр. 1000):`, 
+            { parse_mode: 'Markdown' });
+        break;
+
+      case 'min_followers':
+        const min = parseInt(text);
+        if (isNaN(min)) return bot.sendMessage(chatId, '❌ Це має бути число.');
+        
+        state.min = min;
+        state.max = DEFAULT_MAX_FOLLOWERS;
+        state.limit = DEFAULT_LIMIT;
+        
+        userStates.delete(chatId);
+        startScrapingProcess(chatId, state);
+        break;
+    }
+  } catch (error) {
+    bot.sendMessage(chatId, `⚠️ Помилка: ${error.message}`);
+    userStates.delete(chatId);
+  }
+}
+
+// Обробка текстових команд з кастомної клавіатури
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  // Ігноруємо команди що починаються з /
+  if (text && !text.startsWith('/')) {
+    // Спочатку перевіряємо, чи це кнопка з кастомної клавіатури
+    switch(text) {
+      case '👥 Парсинг підписників':
+        if (!hasAccess(chatId)) return;
+        userStates.set(chatId, { 
+          step: 'usernames', 
+          parseType: 'followers' 
+        });
+        bot.sendMessage(chatId, 
+          `👥 *Парсинг підписників*\n\n` +
+          `✍️ *Крок 1/2*\nВведи нікнейми через кому:\n_(напр. zelenskyy, emrata)_`, 
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case '📋 Парсинг підписок':
+        if (!hasAccess(chatId)) return;
+        userStates.set(chatId, { 
+          step: 'usernames', 
+          parseType: 'following' 
+        });
+        bot.sendMessage(chatId, 
+          `📋 *Парсинг підписок*\n\n` +
+          `✍️ *Крок 1/2*\nВведи нікнейми через кому:\n_(напр. zelenskyy, emrata)_`, 
+          { parse_mode: 'Markdown' }
+        );
+        break;
+
+      case '🛡️ Адмін-панель':
+        if (!isAdmin(chatId)) {
+          return bot.sendMessage(chatId, '❌ Доступ заборонено. Тільки для адміністраторів.');
+        }
+        
+        if (authorizedUsers.length === 0) {
+          return bot.sendMessage(chatId, '📂 Список користувачів порожній.');
+        }
+
+        const userButtons = authorizedUsers.map(user => ([
+          { text: `${user.name || 'User'} (${user.id})`, callback_data: 'dummy' },
+          { text: '❌ Видалити', callback_data: `delete_user_${user.id}` }
+        ]));
+        
+        userButtons.unshift([{ text: 'ℹ️ Як видаляти?', callback_data: 'admin_help' }]);
+
+        bot.sendMessage(chatId, `🛡 *Адмін-Панель* (${authorizedUsers.length}):`, {
+          parse_mode: 'Markdown',
+          reply_markup: { inline_keyboard: userButtons }
+        });
+        break;
+
+      case '📚 Довідка':
+        bot.sendMessage(chatId, 
+          `📚 <b>Гайд SAMIParser</b>\n\n` +
+          `<b>Як користуватися:</b>\n` +
+          `1️⃣ Оберіть тип парсингу з меню\n` +
+          `2️⃣ Введіть нікнейми через кому\n` +
+          `3️⃣ Вкажіть мінімальну кількість підписників\n` +
+          `4️⃣ Бот надішле файл з результатами\n\n` +
+          `<b>Доступні команди:</b>\n` +
+          `/start - Почати роботу\n` +
+          `/help - Цей гайд\n` +
+          `/id - Показати ваш Chat ID\n` +
+          `/admin - Адмін-панель\n\n` +
+          `<b>Потрібна допомога?</b>\n` +
+          `Напишіть адміністратору.`,
+          { parse_mode: 'HTML' }
+        );
+        break;
+
+      case '🆔 Мій ID':
+        bot.sendMessage(chatId, 
+          `🆔 <b>Ваш Chat ID:</b>\n<code>${chatId}</code>\n\n` +
+          `<i>Скопіюйте цей ID, якщо потрібно додати вас до бота.</i>`,
+          { parse_mode: 'HTML' }
+        );
+        break;
+
+      default:
+        // Якщо це не кнопка з кастомної клавіатури, перевіряємо чи це крок парсингу
+        handleParsingSteps(msg);
+        break;
+    }
+  } else {
+    // Якщо це команда або інший текст, також перевіряємо парсинг
+    handleParsingSteps(msg);
+  }
 });
 
 // Callbacks (Кнопки)
@@ -833,42 +1035,6 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, `🗑 Видалено.`);
     bot.deleteMessage(chatId, query.message.message_id);
   }
-
-  // Старт парсингу
-  else if (data === 'start_parsing') {
-    if (!hasAccess(chatId)) return;
-    
-    // Додаємо вибір типу парсингу
-    bot.sendMessage(chatId, `🔍 *Оберіть тип парсингу:*`, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '👥 Підписники (Followers)', callback_data: 'parse_followers' }],
-          [{ text: '📋 Підписки (Following)', callback_data: 'parse_following' }]
-        ]
-      }
-    });
-    bot.answerCallbackQuery(query.id);
-  }
-  
-  // Вибір типу парсингу
-  else if (data === 'parse_followers' || data === 'parse_following') {
-    if (!hasAccess(chatId)) return;
-    
-    userStates.set(chatId, { 
-      step: 'usernames', 
-      parseType: data === 'parse_followers' ? 'followers' : 'following' 
-    });
-    
-    const typeText = data === 'parse_followers' ? 'підписників' : 'підписок';
-    
-    await bot.sendMessage(chatId, 
-      `👥 *Парсинг ${typeText}*\n\n` +
-      `✍️ *Крок 1/2*\nВведи нікнейми через кому:\n_(напр. zelenskyy, emrata)_`, 
-      { parse_mode: 'Markdown' }
-    );
-    bot.answerCallbackQuery(query.id);
-  }
   
   // Довідка
   else if (data === 'user_guide') {
@@ -888,54 +1054,6 @@ bot.on('callback_query', async (query) => {
   else if (data === 'admin_help') {
     bot.sendMessage(chatId, `ℹ️ Щоб видалити, натисніть хрестик.`, { parse_mode: 'Markdown' });
     bot.answerCallbackQuery(query.id);
-  }
-});
-
-// Обробка тексту (Wizard Flow)
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const text = msg.text;
-
-  if (!text || text.startsWith('/')) return;
-  if (!hasAccess(chatId)) return;
-
-  const state = userStates.get(chatId);
-  if (!state) return;
-
-  try {
-    switch (state.step) {
-      case 'usernames':
-        const usernames = text.split(',').map(u => u.trim().replace('@', '')).filter(Boolean);
-        if (usernames.length === 0) return bot.sendMessage(chatId, '⚠️ Введіть хоча б один нік.');
-
-        state.usernames = usernames;
-        state.step = 'min_followers';
-        
-        const typeText = state.parseType === 'followers' ? 'підписників' : 'підписок';
-        
-        await bot.sendMessage(chatId, 
-            `✅ Прийнято: **${usernames.length}** акаунтів.\n` +
-            `📊 Тип: **${typeText}**\n\n` +
-            `✍️ *Крок 2/2*\n` +
-            `Вкажіть **мінімальну** кількість підписників (напр. 1000):`, 
-            { parse_mode: 'Markdown' });
-        break;
-
-      case 'min_followers':
-        const min = parseInt(text);
-        if (isNaN(min)) return bot.sendMessage(chatId, '❌ Це має бути число.');
-        
-        state.min = min;
-        state.max = DEFAULT_MAX_FOLLOWERS;
-        state.limit = DEFAULT_LIMIT;
-        
-        userStates.delete(chatId);
-        await startScrapingProcess(chatId, state);
-        break;
-    }
-  } catch (error) {
-    bot.sendMessage(chatId, `⚠️ Помилка: ${error.message}`);
-    userStates.delete(chatId);
   }
 });
 
