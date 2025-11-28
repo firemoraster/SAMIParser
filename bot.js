@@ -99,6 +99,13 @@ if (!token) {
 
 const bot = new TelegramBot(token, { polling: true });
 const limit = pLimit(CONCURRENCY_LIMIT);
+
+// Перевірка що pLimit працює правильно
+console.log('✅ pLimit initialized:', typeof limit === 'function');
+if (typeof limit !== 'function') {
+    console.error('❌ CRITICAL: pLimit failed to initialize');
+    process.exit(1);
+}
 const userStates = new Map();
 let authorizedUsers = [];
 let reelsDb = {}; // { chatId: [link1, link2] }
