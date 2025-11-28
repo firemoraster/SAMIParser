@@ -703,7 +703,6 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                 if (!user) continue;
 
                 const followerCount = user.follower_count || 0;
-                const followingCount = user.following_count || 0;
                 const isPrivate = user.is_private || false;
 
                 if (followerCount < min || followerCount > max || isPrivate) {
@@ -726,16 +725,11 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                     username,
                     fullName,
                     followers: followerCount,
-                    following: followingCount,
-                    posts: user.media_count || 0,
                     avgReelsViews,
                     rawAverage: avgReelsViews,
-                    reelsViews,
                     email,
-                    biography,
-                    isVerified: user.is_verified || false,
-                    isPrivate,
-                    language: detectAll(biography || postsText)[0]?.lang || 'uk'
+                    language: detectAll(biography || postsText)[0]?.lang || 'uk',
+                    profile_pic_url: user.profile_pic_url || null
                 };
 
                 results.push(result);
@@ -762,7 +756,6 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                 if (!user) return null;
 
                 const followerCount = user.follower_count || 0;
-                const followingCount = user.following_count || 0;
                 const isPrivate = user.is_private || false;
 
                 if (followerCount < min || followerCount > max || isPrivate) {
@@ -785,16 +778,11 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                     username,
                     fullName,
                     followers: followerCount,
-                    following: followingCount,
-                    posts: user.media_count || 0,
                     avgReelsViews,
                     rawAverage: avgReelsViews,
-                    reelsViews,
                     email,
-                    biography,
-                    isVerified: user.is_verified || false,
-                    isPrivate,
-                    language: detectAll(biography || postsText)[0]?.lang || 'uk'
+                    language: detectAll(biography || postsText)[0]?.lang || 'uk',
+                    profile_pic_url: user.profile_pic_url || null
                 };
 
                 results.push(result);
@@ -818,48 +806,87 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
     return results.filter(Boolean);
 };
 
-const saveToXlsx = async (data, filename) => {
+const saveToXlsx = async (data, username) => {
     try {
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Leads');
+        const worksheet = workbook.addWorksheet('Results');
 
+        // Set column headers according to your desired structure
         worksheet.columns = [
+            { header: 'Profile Picture', key: 'profile_pic', width: 15 },
             { header: 'Username', key: 'username', width: 20 },
-            { header: 'Name', key: 'fullName', width: 25 },
-            { header: 'Followers', key: 'followers', width: 12 },
-            { header: 'Following', key: 'following', width: 12 },
-            { header: 'Posts', key: 'posts', width: 10 },
-            { header: 'Avg Reels Views', key: 'avgReelsViews', width: 15 },
-            { header: 'Reels Views', key: 'reelsViews', width: 20 },
-            { header: 'Email', key: 'email', width: 25 },
-            { header: 'Bio', key: 'biography', width: 40 },
-            { header: 'Verified', key: 'isVerified', width: 10 },
-            { header: 'Private', key: 'isPrivate', width: 10 },
-            { header: 'Language', key: 'language', width: 10 }
+            { header: 'URL', key: 'url', width: 50 },
+            { header: 'Full Name', key: 'full_name', width: 30 },
+            { header: 'Follower Count', key: 'follower_count', width: 15 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Average', key: 'average', width: 15 },
+            { header: 'Languages', key: 'languages', width: 30 }
         ];
 
-        data.forEach(item => {
-            worksheet.addRow({
-                username: item.username,
-                fullName: item.fullName,
-                followers: item.followers,
-                following: item.following,
-                posts: item.posts,
-                avgReelsViews: item.avgReelsViews,
-                reelsViews: JSON.stringify(item.reelsViews),
-                email: item.email || 'N/A',
-                biography: item.biography,
-                isVerified: item.isVerified ? 'Yes' : 'No',
-                isPrivate: item.isPrivate ? 'Yes' : 'No',
-                language: item.language
-            });
-        });
+        // Set row height for image rows
+        worksheet.getRow(1).height = 100;
 
-        const safeFilename = `leads_${filename}_${Date.now()}.xlsx`.replace(/[^a-zA-Z0-9._-]/g, '_');
+        // Add data rows
+        for (let i = 0; i < data.length; i++) {
+            const item = data[i];
+            const row = worksheet.addRow({
+                username: item.username || '',
+                url: `https://www.instagram.com/${item.username}/`,
+                full_name: item.fullName || '',
+                follower_count: formatNumber(item.followers) || 0,
+                email: item.email || '',
+                average: formatNumber(item.avgReelsViews) || '',
+                languages: item.language || ''
+            });
+
+            // Set row height for image rows
+            row.height = 100;
+
+            // Download and add profile picture if available
+            if (item.profile_pic_url) {
+                try {
+                    const imageResponse = await axios.get(item.profile_pic_url, {
+                        responseType: 'arraybuffer',
+                        timeout: 10000
+                    });
+                    const imageBuffer = Buffer.from(imageResponse.data);
+                    
+                    // Determine image extension
+                    let imageExtension = 'jpeg';
+                    const contentType = imageResponse.headers['content-type'];
+                    if (contentType?.includes('png')) {
+                        imageExtension = 'png';
+                    } else if (contentType?.includes('gif')) {
+                        imageExtension = 'gif';
+                    } else if (contentType?.includes('webp')) {
+                        imageExtension = 'webp';
+                    }
+
+                    // Add image to workbook
+                    const imageId = workbook.addImage({
+                        buffer: imageBuffer,
+                        extension: imageExtension,
+                    });
+
+                    // Insert image into cell
+                    worksheet.addImage(imageId, {
+                        tl: { col: 0, row: i + 1 },
+                        br: { col: 1, row: i + 2 },
+                        editAs: 'oneCell'
+                    });
+                } catch (error) {
+                    console.log(`❌ Failed to load image for ${item.username}: ${error.message}`);
+                }
+            }
+        }
+
+        // Save with username as filename
+        const safeFilename = `${username}.xlsx`.replace(/[^a-zA-Z0-9._-]/g, '_');
         await workbook.xlsx.writeFile(safeFilename);
+        console.log(`✅ Saved ${data.length} results to ${safeFilename}`);
         return safeFilename;
     } catch (error) {
-        console.error('Error saving XLSX:', error);
+        console.error('❌ Error saving XLSX:', error);
         return null;
     }
 };
@@ -1253,12 +1280,12 @@ async function startScrapingProcess(chatId, config) {
                         { chat_id: chatId, message_id: msgId, parse_mode: 'HTML' }
                     );
 
-                    const filename = await saveToXlsx(accountResults, `${currentInput}_${config.parseType}`);
+                    const filename = await saveToXlsx(accountResults, currentInput);
 
                     if (filename) {
                         const fileBuffer = await fs.readFile(filename);
                         await bot.sendDocument(chatId, fileBuffer, {}, {
-                            filename: `Leads_${currentInput}_${Date.now()}.xlsx`,
+                            filename: filename,
                             contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         });
 
