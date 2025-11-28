@@ -490,7 +490,7 @@ const getUsersByHashtag = async (tag, limitAmount, attempt = 0, onProgress = nul
             const sections = response.data.sections || [];
             
             if (sections.length === 0 && currentTab === 'recent' && !next_max_id) {
-                console.log('⚠️ Вкладка "Недавні" порожня або прихована. Перемикаюся на "Топ" (Popuar)...');
+                console.log('⚠️ Вкладка "Недавні" порожня або прихована. Перемикаюся на "Топ" (Popular)...');
                 currentTab = 'top';
                 continue; 
             }
@@ -515,15 +515,17 @@ const getUsersByHashtag = async (tag, limitAmount, attempt = 0, onProgress = nul
             await randomSleep(1500, 3000); 
 
         } catch (e) {
+            console.error(`❌ Помилка парсингу хештегу ${tag}:`, e.message);
+            
             if (attempt < ACC_POOL.length) {
                 if (e.response && (e.response.status === 401 || e.response.status === 403 || e.response.status === 429)) {
                     console.log(`⚠️ Hashtag parsing error (attempt ${attempt + 1}), rotating...`);
                     rotateAccount();
-                    attempt++;
-                    continue;
+                    return getUsersByHashtag(tag, limitAmount, attempt + 1, onProgress);
                 }
             }
             hasMore = false; 
+            break;
         }
     }
 
@@ -680,62 +682,64 @@ const mapFollowers = async ({ ids, limit, min, max }, progressCallback) => {
     const results = [];
     let processed = 0;
 
-    const promises = ids.slice(0, limit).map(id => 
-        limit(async () => {
-            try {
-                const user = await getUserById(id);
-                if (!user) return null;
+    // Використовуємо pLimit для обмеження конкурентності
+    const limitedMap = limit(async (id) => {
+        try {
+            const user = await getUserById(id);
+            if (!user) return null;
 
-                const followerCount = user.follower_count || 0;
-                const followingCount = user.following_count || 0;
-                const isPrivate = user.is_private || false;
-                const isVerified = user.is_verified || false;
-                const username = user.username || 'N/A';
-                const fullName = user.full_name || 'N/A';
-                const biography = user.biography || '';
+            const followerCount = user.follower_count || 0;
+            const followingCount = user.following_count || 0;
+            const isPrivate = user.is_private || false;
+            const isVerified = user.is_verified || false;
+            const username = user.username || 'N/A';
+            const fullName = user.full_name || 'N/A';
+            const biography = user.biography || '';
 
-                if (followerCount < min || followerCount > max || isPrivate) {
-                    return null;
-                }
-
-                const reelsViews = await getReels(id);
-                const avgReelsViews = reelsViews.length > 0 
-                    ? Math.round(reelsViews.reduce((a, b) => a + b, 0) / reelsViews.length) 
-                    : 0;
-
-                const postsText = await getPosts(username);
-                const email = extractEmail(postsText) || extractEmail(biography);
-
-                const result = {
-                    username,
-                    fullName,
-                    followers: followerCount,
-                    following: followingCount,
-                    posts: user.media_count || 0,
-                    avgReelsViews,
-                    rawAverage: avgReelsViews,
-                    reelsViews,
-                    email,
-                    biography,
-                    isVerified,
-                    isPrivate,
-                    language: detectAll(biography || postsText)[0]?.lang || 'uk'
-                };
-
-                results.push(result);
-                processed++;
-                progressCallback(processed, Math.min(ids.length, limit), username);
-
-                await randomSleep(800, 1500);
-                return result;
-            } catch (e) {
-                console.error(`Error processing user ${id}:`, e.message);
+            if (followerCount < min || followerCount > max || isPrivate) {
                 return null;
             }
-        })
-    );
 
+            const reelsViews = await getReels(id);
+            const avgReelsViews = reelsViews.length > 0 
+                ? Math.round(reelsViews.reduce((a, b) => a + b, 0) / reelsViews.length) 
+                : 0;
+
+            const postsText = await getPosts(username);
+            const email = extractEmail(postsText) || extractEmail(biography);
+
+            const result = {
+                username,
+                fullName,
+                followers: followerCount,
+                following: followingCount,
+                posts: user.media_count || 0,
+                avgReelsViews,
+                rawAverage: avgReelsViews,
+                reelsViews,
+                email,
+                biography,
+                isVerified,
+                isPrivate,
+                language: detectAll(biography || postsText)[0]?.lang || 'uk'
+            };
+
+            results.push(result);
+            processed++;
+            progressCallback(processed, Math.min(ids.length, limit), username);
+
+            await randomSleep(800, 1500);
+            return result;
+        } catch (e) {
+            console.error(`❌ Error processing user ${id}:`, e.message);
+            return null;
+        }
+    });
+
+    // Виконуємо обмежену кількість запитів паралельно
+    const promises = ids.slice(0, limit).map(id => limitedMap(id));
     await Promise.all(promises);
+    
     return results.filter(Boolean);
 };
 
