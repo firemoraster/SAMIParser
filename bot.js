@@ -33,9 +33,9 @@ const ACC_POOL = [
     {
         // Акаунт №1 (Новий)
         id: '12137273349',
-        username: 'acc_main', 
-        cookie: `mid=aJrYRwALAAE48nqOvci6wNAQ3lio; ig_did=488FD22C-5BB6-4C50-8151-9AA121306AC1; ig_nrcb=1; datr=RNiaaBVfsX__Lsz66hG5_1pI; ds_user_id=12137273349; csrftoken=05zbEm6zFf3K8meinQJ5UwnK3mljADc0; ps_l=1; ps_n=1; sessionid=12137273349%3ASlTo0UERf7DmXE%3A7%3AAYjuazsYmfv6qRspJbftuaOEWnU1agf318nUSnZRkA; wd=358x911; rur="RVA\\05412137273349\\0541795844211:01fef4bbf6aa305b5df0ad8d396911ab6b13a77fd80c0d0b3b95c359771410e92502306d"`,
-        csrftoken: '05zbEm6zFf3K8meinQJ5UwnK3mljADc0'
+        username: 'acc_main',
+        cookie: `csrftoken=89AGWX1C7H7DXZLUXesobyL96AwOBAArm; datr=RNiaaBVfxS__Lsz66hG5_1pl; ds_user_id=12137273349; ig_did=488FD22C-5BB6-4C50-8151-9AA121306AC1; ig_nrcb=1; locale=en_US; mid=aJrYwALAAAE48nqOvci6wNAQ3Iio; ps_l=1; ps_n=1; rur=RVA,12137273349,1796238077:01fe8bca68a5e3582abfcbc573e8ef43e8bbe82896785886892fda9cf311cfb5a5f03c92; sessionid=12137273349%3AejnfVNQhANLAm4%3A4%3AAYjUzhR_CHNG835mYrhvT6-XQcHHvN49xqqRc4nDIg; wd=1920x911`,
+        csrftoken: '89AGWX1C7H7DXZLUXesobyL96AwOBAArm'
     },
     {
         // Акаунт №2 (Старий/Резервний)
@@ -310,7 +310,7 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
             __rev: '1029375730',
             __s: '51epm7:7gjo7n:1nh6bo',
             __hsi: '7568977964973035639',
-            __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2swlo8od8-U2zxe2GewGw9a361qwuEjUlwhEe87q0oa2-azqwt8d-2u2J0bS1LwTwKG1pg2fwxyo6O1FwlA3a3zhA6bwIxeUnAwCAxW1oxe6UaUaE2xyVrx60hK3KawOwgV84qdxq',
+            __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2iyo5m263ifK0EUjwGzEaE2iwNwmE7G4-5o4q3y1Sw62wLyESE7i3vwDwHg2ZwrUdUbGwmk0zU8oC1Iwqo5p0OwUQp1yUb8jK5V89F8uwm8jxK2K2G0EoKmUhw4rwXyEcE4ei16wAw',
             __csr: 'ggMgN15d9k4cp5gD5pdMFZl_4lqRjEGlEDJpHLFt6zumvHt5ZajUGibgGcBUKyy9bELjHJ6XhqDjgxJd5Qi9GquEsDG9AAUBeVuQGighBxeazuiudx_gTBhaDBznKl1J2KAeBgTBGlDKWy99FaKumFEzCgyezEiAgkufzU9oizUsxiUpAG16w05tPg16ooGi684J05p80P92wBxe057E88duBhEaYElw9abg30w3GE3BU0KSbCg39o1TE62oWy4cgG4VA18o4pzeQ4EalBg8Ehwpo4Ou0pJwvU56u8g0GgOy40KE2zcaw14QgEjiy8wb38szQ0se01GYw4oo1V80iZw2qHw1Y20ki',
             __hsdp: 'gfts4E9MlilOgiUMIrDcrB910O34hktQRFcihKXQNLjA4oFGemn57GVikiey1ek-7A14DIhxy2C1uQ1ax93swtwXy98Wf89jAK6Eownh88o84589E2hwXDwIxS0EK1px69wh8owDxS9x2544k11gkxCE8Upw8K0TE0MW0luaw28Q0yo9o0FZ0pUlw_wiU7G0bFwXwjE0KG1cwaOaw43xUwfE3YwbG8G0P8',
             __hblp: '0uk2K1HwQxubAwzwGxO3a7oy2h4zEmw8e68kwGxp16ex2ez89UhxG5XAxudxWim5KV8y2e9y9oC6oaoao-i6QifwCx10GyFEdoO4u5ubKuu2i4UC7o24Ua8ixS4oC8wwyVVEoXxy8xS9x2544k4o4l1yE8Upw8K3Km0D8kwaq0N81zo188dEG4U0wZ08C2m0X82twda11gbo9Eixm3-2W6Q1WwnUgw2u8eU4W1Gw60wfW5F8c86DwAxKaxa0W9A5Vy0Fxi4E2kwhUOeG9xK0wEyE4a3C1fw',
@@ -1081,30 +1081,42 @@ const sendTrackerReport = async (chatId) => {
 
     for (let i = 0; i < userData.length; i++) {
         const url = userData[i];
-        
         try {
             await bot.editMessageText(`⏳ Обробляю ${i + 1}/${userData.length}...`, {
                 chat_id: chatId,
                 message_id: progressMsg.message_id
             });
 
-            const metrics = await getReelMetricsWithLikes(url);
-            
+            // Отримуємо масив переглядів (наприклад, за різні дати) для цього відео
+            // Якщо getReelMetricsWithLikes повертає лише одне число, обгортаємо у масив
+            let metricsArr = await getReelMetricsWithLikes(url);
+            let viewsArr = [];
+            if (Array.isArray(metricsArr)) {
+                // Якщо повертається масив об'єктів з views
+                viewsArr = metricsArr.map(m => m.views || 0).filter(v => typeof v === 'number');
+            } else if (metricsArr && typeof metricsArr.views === 'number') {
+                viewsArr = [metricsArr.views];
+            } else {
+                viewsArr = [0];
+            }
+            // Сума всіх переглядів
+            const totalViews = viewsArr.reduce((a, b) => a + b, 0);
+
             let status = 'Успішно';
-            if (metrics.views === 0) {
+            if (totalViews === 0) {
                 status = 'Немає даних';
             }
 
             worksheet.addRow({
                 date: today,
                 url: url,
-                views: metrics.views || 0,
-                likes: metrics.likes || 0,
-                comments: metrics.comments || 0,
+                views: totalViews,
+                likes: (metricsArr.likes || 0),
+                comments: (metricsArr.comments || 0),
                 status: status
             });
 
-            if (metrics.views > 0) {
+            if (totalViews > 0) {
                 successCount++;
             }
 
@@ -1169,12 +1181,12 @@ const sendTrackerReport = async (chatId) => {
 // 🚀 ОСНОВНИЙ ПРОЦЕС
 // ==========================================
 
-async function startScrapingProcess(chatId, config) {
+async function startScrapingProcess(chatId, config, overrideInput) {
+    let currentInput = overrideInput || config.usernames[0];
     let msgId = (await bot.sendMessage(chatId, `🛰 *Ініціалізація...*`, { parse_mode: 'Markdown' })).message_id;
 
     try {
         for (let i = 0; i < config.usernames.length; i++) {
-            const currentInput = config.usernames[i];
             const safeInput = escapeHtml(currentInput);
 
             try {
@@ -1425,10 +1437,10 @@ function handleParsingSteps(msg) {
     try {
         switch (state.step) {
             case 'usernames':
-                const usernames = text.split(',').map(u => u.trim().replace('@', '')).filter(Boolean);
-                if (usernames.length === 0) return bot.sendMessage(chatId, '⚠️ Введіть хоча б один нік або хештег.');
+                let sources = text.split(',').map(u => u.trim().replace('@', '')).filter(Boolean);
+                if (sources.length === 0) return bot.sendMessage(chatId, '⚠️ Введіть хоча б один нік або хештег.');
 
-                state.usernames = usernames;
+                state.usernames = sources;
                 state.step = 'min_followers';
 
                 let typeText = '';
@@ -1437,11 +1449,11 @@ function handleParsingSteps(msg) {
                 else typeText = 'хештегів';
 
                 bot.sendMessage(chatId,
-                    `✅ Прийнято: **${usernames.length}** джерел.\n` +
+                    `✅ Прийнято: **${sources.length}** джерел.\n` +
                     `📊 Тип: **${typeText}**\n\n` +
                     `✍️ *Крок 2/2*\n` +
                     `Вкажіть **мінімальну** кількість підписників для знайдених юзерів (напр. 1000):`,
-                    { parse_mode: 'Markdown' });
+                                       { parse_mode: 'Markdown' });
                 break;
 
             case 'min_followers':
@@ -1453,7 +1465,25 @@ function handleParsingSteps(msg) {
                 state.limit = DEFAULT_LIMIT;
 
                 userStates.delete(chatId);
-                startScrapingProcess(chatId, state);
+
+                // Multi-hashtag support
+                if (state.parseType === 'hashtag') {
+                    (async () => {
+                        for (const hashtag of state.usernames) {
+                            let config = {
+                                ...state,
+                                parseType: 'hashtag',
+                                min: state.min,
+                                max: state.max,
+                                limit: state.limit
+                            };
+                            await startScrapingProcess(chatId, config, hashtag);
+                        }
+                        await bot.sendMessage(chatId, '✅ <b>Всі хештеги оброблено!</b>', { parse_mode: 'HTML' });
+                    })();
+                } else {
+                    startScrapingProcess(chatId, state);
+                }
                 break;
         }
     } catch (error) {
