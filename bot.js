@@ -23,7 +23,7 @@ const REELS_DB_FILE = path.join(DATA_DIR, 'reels_db.json');
 // НАЛАШТУВАННЯ ПАРСИНГУ
 const DEFAULT_LIMIT = 1300;
 const DEFAULT_MAX_FOLLOWERS = 1000000000;
-const CONCURRENCY_LIMIT = 5;
+const CONCURRENCY_LIMIT = 3; // Зменшив до 3 для стабільності на одному акаунті
 
 // ==========================================
 // 🍪 ACCOUNT POOL & ROTATION LOGIC
@@ -31,19 +31,15 @@ const CONCURRENCY_LIMIT = 5;
 
 const ACC_POOL = [
     {
-        // Акаунт №1 (Новий)
+        // ВАШ РОБОЧИЙ АКАУНТ (СВІЖІ ДАНІ)
         id: '12137273349',
-        username: 'acc_main',
-        cookie: `csrftoken=89AGWX1C7H7DXZLUXesobyL96AwOBAArm; datr=RNiaaBVfxS__Lsz66hG5_1pl; ds_user_id=12137273349; ig_did=488FD22C-5BB6-4C50-8151-9AA121306AC1; ig_nrcb=1; locale=en_US; mid=aJrYwALAAAE48nqOvci6wNAQ3Iio; ps_l=1; ps_n=1; rur=RVA,12137273349,1796238077:01fe8bca68a5e3582abfcbc573e8ef43e8bbe82896785886892fda9cf311cfb5a5f03c92; sessionid=12137273349%3AejnfVNQhANLAm4%3A4%3AAYjUzhR_CHNG835mYrhvT6-XQcHHvN49xqqRc4nDIg; wd=1920x911`,
-        csrftoken: '89AGWX1C7H7DXZLUXesobyL96AwOBAArm'
-    },
-    {
-        // Акаунт №2 (Старий/Резервний)
-        id: '18992364034',
-        username: 'acc_backup',
-        cookie: `ig_did=38D527BA-DD52-4034-A15D-021C637C145D; ig_nrcb=1; datr=F0V8Z4tJEDXzUwMKLnXPzQrh; ds_user_id=18992364034; csrftoken=oYY6Tkt9TxFg9Wxl9ElfnXPmExJXyY1u; ps_l=1; ps_n=1; mid=aGzR7wAEAAE5s66SP_Ub17hSBBcL; sessionid=18992364034%3AG2OqY11JfOr7TG%3A11%3AAYhCWu5mOAzXojXdLhN1XwN2VLMizsNx5Y9Guc3RS8M; wd=915x962; rur="CLN\\05418992364034\\0541793822123:01fefc17be789abca01ad3abe51d04655b9e5dfa90a6fb4380710ba10d0751a0bd09d83d"`,
-        csrftoken: 'oYY6Tkt9TxFg9Wxl9ElfnXPmExJXyY1u'
+        username: 'melanymusillo_acc', // Ім'я для логів
+        // Ваші свіжі куки з попереднього кроку
+        cookie: 'csrftoken=1a3uEzakx-3LiE5qfIQ-YN; datr=hn4vaVNq7MvdM94ZbdvOhbZb; ig_did=56C6F218-D328-43A3-9264-89695460572B; wd=1920x179; mid=aS9-hgALAAF9yrgaqeWgw5Y-Dwot; sessionid=12137273349%3AIcqM72BpZRoq3J%3A4%3AAYiNZ8KVovyAqQQAmYBFYjjHwq1wZDmj9rpSenHkmw; ds_user_id=12137273349; rur="RVA\\05412137273349\\0541796257258:01fe410223a58fa7e457d83584afc520f3f9e3c703f2d801efba0bc86084552917333abb"',
+        csrftoken: '1a3uEzakx-3LiE5qfIQ-YN',
+        lsd: 'B-2Of-xMV_X3_Sv3LeBr4M' // Додав LSD
     }
+    // Можна додати інші акаунти сюди за тим же шаблоном
 ];
 
 let currentAccIndex = 0;
@@ -58,22 +54,21 @@ const getAuthHeaders = () => {
     const acc = ACC_POOL[currentAccIndex];
     return {
         'accept': '*/*',
-        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,uk;q=0.7',
+        'accept-language': 'uk-UA,uk;q=0.8,en-US;q=0.5,en;q=0.3',
         'content-type': 'application/x-www-form-urlencoded',
         'cookie': acc.cookie,
         'dnt': '1',
         'origin': 'https://www.instagram.com',
         'priority': 'u=1, i',
         'sec-ch-prefers-color-scheme': 'dark',
-        'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"',
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+        // Використовуємо User-Agent для Windows/Firefox як у вас
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0',
         'x-asbd-id': '359341',
         'x-csrftoken': acc.csrftoken,
+        'x-fb-lsd': acc.lsd || 'B-2Of-xMV_X3_Sv3LeBr4M', // Фолбек якщо немає в об'єкті
         'x-ig-app-id': '936619743392459',
     };
 };
@@ -100,15 +95,11 @@ if (!token) {
 const bot = new TelegramBot(token, { polling: true });
 const limit = pLimit(CONCURRENCY_LIMIT);
 
-// Перевірка що pLimit працює правильно
 console.log('✅ pLimit initialized:', typeof limit === 'function');
-if (typeof limit !== 'function') {
-    console.error('❌ CRITICAL: pLimit failed to initialize');
-    process.exit(1);
-}
+
 const userStates = new Map();
 let authorizedUsers = [];
-let reelsDb = {}; // { chatId: [link1, link2] }
+let reelsDb = {}; 
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
@@ -122,13 +113,11 @@ const loadUsers = async () => {
             try { await fs.access(DATA_DIR); } catch { await fs.mkdir(DATA_DIR, { recursive: true }); }
         }
         
-        // Load Authorized Users
         try {
             const data = await fs.readFile(USERS_FILE, 'utf-8');
             authorizedUsers = JSON.parse(data);
         } catch { authorizedUsers = []; await saveUsers(); }
 
-        // Load Reels DB
         try {
             const rData = await fs.readFile(REELS_DB_FILE, 'utf-8');
             reelsDb = JSON.parse(rData);
@@ -222,69 +211,36 @@ const randomSleep = (min, max) => sleep(Math.floor(Math.random() * (max - min + 
 // 📡 INSTAGRAM API (COMMON)
 // ==========================================
 
+// ✅ ОНОВЛЕНО: Стабільний REST API метод
 const getUserById = async (id, attempt = 0) => {
     try {
-        const body = {
-            av: getCurrentAccId(),
-            __d: 'www',
-            __user: getCurrentAccId(),
-            __a: '1',
-            __req: '2',
-            __hs: '20396.HCSV2:instagram_web_pkg.2.1...0',
-            dpr: '2',
-            __ccg: 'GOOD',
-            __rev: '1029375730',
-            __s: 'sm56uc:7gjo7n:0vxfxz',
-            __hsi: '7568961909656489821',
-            __dyn: '7xe6E5q5U5ObwKBAg5S1Dxu13wvoKewSAwHwNwcy0lW4o0B-q1ew6ywaq0yE460qe4o5-1ywOwa90Fw4Hw9O0M82zxe2GewGw9a361qw8W1uw2oEGdwtU662O0Lo6-3u2WE15E6O1FwlE6PhA6bwg8rAwHxW1oxe17wcObBK4o16U4q3a13wiUS5E&__csr=ggMgN15d9EG2RNAZldlX9QqGuJBrHGZFfjUHoObyHVqCzudWQVriCz8ggGcBUUwCiV7GVbDCBGt4y6iQng889WyoKeyprFa15xO7Z3UmxhoC74aBwKBUKfACAGUgzUx0VAgkufzUe8-78kK6p84C00lTd04OGi680DIEeo0kuwwwRWg560AE0hUw3RoKp03cAawp61lBgiwFml0yx605Uja8g1rE0izxO0ti01Llo0qyw2qE092o',
-            __hsdp: 'lcIl24zuKhend3GBh89EaiqQmmBVpeXQhbmty45qsMSay7RtvQGbLgO8yKbAyUCUkyQ2p2tiwUkwy1IDIg14waO2e2219xXyAUy6E31xm0_80wC0xk2W03560fIw3xE0xO0se0P8',
-            __hblp: '04iwQxu488U2ow5wwKz89UhxG225US2em6bzo8UC8zUpwFwFxi6UlwtodouxvyUK0iK1Tw-wCwlo5-0gym0Io1qU0GW1lw1o-2q1EwKxK0X80Hi08Ww5bw278iw9i17xW9xK0zE4a3C1fw',
-            __sjsp: 'qcIl25AuK9Dd2Giyki1gDGbGFVeVkmKFS8gsl3EGcHjDy7BgO261DyGRg',
-            __comet_req: '7',
-            fb_dtsg: 'NAft2vrU9tXgRSNVV0D_i_ralk2AzRL_Akiom9vq0o_kQSRbSxPrPvw:17864970403026470:1744117021',
-            jazoest: '26546',
-            lsd: 'vVbWdDNFnfguO3z1lxm1aQ',
-            __spin_r: '1029375730',
-            __spin_b: 'trunk',
-            __spin_t: '1762286273',
-            fb_api_caller_class: 'RelayModern',
-            fb_api_req_friendly_name: 'PolarisProfilePageContentQuery',
-            server_timestamps: 'true',
-            variables: JSON.stringify({
-                enable_integrity_filters: true,
-                id: id,
-                render_surface: "PROFILE",
-                __relay_internal__pv__PolarisProjectCannesEnabledrelayprovider: true,
-                __relay_internal__pv__PolarisProjectCannesLoggedInEnabledrelayprovider: true,
-                __relay_internal__pv__PolarisCannesGuardianExperienceEnabledrelayprovider: true,
-                __relay_internal__pv__PolarisCASB976ProfileEnabledrelayprovider: false,
-                __relay_internal__pv__PolarisRepostsConsumptionEnabledrelayprovider: false
-            }),
-            doc_id: '24963806849976236'
-        };
-
-        const response = await axios.post(
-            'https://www.instagram.com/graphql/query',
-            new URLSearchParams(body).toString(),
-            {
-                headers: {
-                    ...getAuthHeaders(),
-                    'referer': `https://www.instagram.com/`,
-                    'x-fb-friendly-name': 'PolarisProfilePageContentQuery',
-                    'x-root-field-name': 'fetch__XDTUserDict'
-                }
+        const response = await axios.get(
+            `https://www.instagram.com/api/v1/users/${id}/info/`,
+            { 
+                headers: getAuthHeaders() 
             }
         );
 
-        if (!response.data.data) throw new Error('No Data');
-        return response.data.data.user;
+        if (!response.data || !response.data.user) {
+            // console.log(`Debug Info for ${id}:`, response.data);
+            throw new Error('User not found in response');
+        }
+
+        return response.data.user;
 
     } catch (e) {
-        if (attempt < ACC_POOL.length) {
+        // Ігноруємо 404 (юзер не знайдений/видалений)
+        if (e.response && e.response.status === 404) {
+            return null;
+        }
+
+        if (attempt < ACC_POOL.length - 1) { // -1 бо у нас поки один робочий акк
+            console.log(`⚠️ getUserById failed for ${id} (Status: ${e.response?.status}), rotating...`);
             rotateAccount();
             return getUserById(id, attempt + 1);
         }
-        throw e;
+        
+        return null; // Просто пропускаємо проблемного юзера
     }
 }
 
@@ -298,6 +254,8 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
             });
         };
 
+        // Замінив fb_dtsg на значення з вашого логу, хоча воно швидко змінюється
+        // Зазвичай для пошуку це не критично, але для надійності
         const body = {
             av: getCurrentAccId(),
             __d: 'www',
@@ -308,24 +266,12 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
             dpr: '2',
             __ccg: 'GOOD',
             __rev: '1029375730',
-            __s: '51epm7:7gjo7n:1nh6bo',
-            __hsi: '7568977964973035639',
-            __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2iyo5m263ifK0EUjwGzEaE2iwNwmE7G4-5o4q3y1Sw62wLyESE7i3vwDwHg2ZwrUdUbGwmk0zU8oC1Iwqo5p0OwUQp1yUb8jK5V89F8uwm8jxK2K2G0EoKmUhw4rwXyEcE4ei16wAw',
-            __csr: 'ggMgN15d9k4cp5gD5pdMFZl_4lqRjEGlEDJpHLFt6zumvHt5ZajUGibgGcBUKyy9bELjHJ6XhqDjgxJd5Qi9GquEsDG9AAUBeVuQGighBxeazuiudx_gTBhaDBznKl1J2KAeBgTBGlDKWy99FaKumFEzCgyezEiAgkufzU9oizUsxiUpAG16w05tPg16ooGi684J05p80P92wBxe057E88duBhEaYElw9abg30w3GE3BU0KSbCg39o1TE62oWy4cgG4VA18o4pzeQ4EalBg8Ehwpo4Ou0pJwvU56u8g0GgOy40KE2zcaw14QgEjiy8wb38szQ0se01GYw4oo1V80iZw2qHw1Y20ki',
-            __hsdp: 'gfts4E9MlilOgiUMIrDcrB910O34hktQRFcihKXQNLjA4oFGemn57GVikiey1ek-7A14DIhxy2C1uQ1ax93swtwXy98Wf89jAK6Eownh88o84589E2hwXDwIxS0EK1px69wh8owDxS9x2544k11gkxCE8Upw8K0TE0MW0luaw28Q0yo9o0FZ0pUlw_wiU7G0bFwXwjE0KG1cwaOaw43xUwfE3YwbG8G0P8',
-            __hblp: '0uk2K1HwQxubAwzwGxO3a7oy2h4zEmw8e68kwGxp16ex2ez89UhxG5XAxudxWim5KV8y2e9y9oC6oaoao-i6QifwCx10GyFEdoO4u5ubKuu2i4UC7o24Ua8ixS4oC8wwyVVEoXxy8xS9x2544k4o4l1yE8Upw8K3Km0D8kwaq0N81zo188dEG4U0wZ08C2m0X82twda11gbo9Eixm3-2W6Q1WwnUgw2u8eU4W1Gw60wfW5F8c86DwAxKaxa0W9A5Vy0Fxi4E2kwhUOeG9xK0wEyE4a3C1fw',
-            __sjsp: 'gfts4E9MlilFT13z2PjpP6ViggcwN4l7tdqj4AhbBj6ZeghyCEVpNhWKmh4zEyvzo7C0g93o',
-            __comet_req: '7',
-            fb_dtsg: 'NAfu_KPXWlV8VPP2ejtHV8eoXr7tj3VBBdfuVLaJdLZNcIRC32e0KpQ:17864970403026470:1744117021',
+            fb_dtsg: 'NAft2vrU9tXgRSNVV0D_i_ralk2AzRL_Akiom9vq0o_kQSRbSxPrPvw:17864970403026470:1744117021', 
+            lsd: ACC_POOL[currentAccIndex].lsd,
             jazoest: '26173',
-            lsd: 'Qc7e8U7k_bYsc1O9R2qt8p',
-            __spin_r: '1029375730',
-            __spin_b: 'trunk',
-            __spin_t: '1762290011',
-            __crn: 'comet.igweb.PolarisProfilePostsTabRoute',
-            fb_api_caller_class: 'RelayModern',
-            fb_api_req_friendly_name: 'PolarisSearchBoxRefetchableQuery',
+            __comet_req: '7',
             server_timestamps: 'true',
+            doc_id: '24146980661639222',
             variables: JSON.stringify({
                 data: {
                     context: 'blended',
@@ -336,8 +282,7 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
                     search_surface: 'web_top_search'
                 },
                 hasQuery: true
-            }),
-            doc_id: '24146980661639222'
+            })
         };
 
         const response = await axios.post(
@@ -360,13 +305,14 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
 
         const result = searchResults.find(u => u.user?.username?.toLowerCase() === username.toLowerCase());
         if (!result) {
-            throw new Error(`User with username "${username}" not found in search results`);
+            // Fallback: беремо першого, якщо точного збігу немає
+            return searchResults[0].user.id;
         }
 
         return result.user.id;
 
     } catch (e) {
-        if (attempt < ACC_POOL.length) {
+        if (attempt < ACC_POOL.length - 1) {
             rotateAccount();
             return getUserIdFromUsername(username, attempt + 1);
         }
@@ -401,16 +347,9 @@ const getAllFollowers = async (id, limitAmount, attempt = 0, onProgress = null) 
 
             hasMore = response.data.has_more;
             next_max_id = response.data.next_max_id;
-            await randomSleep(500, 1200);
+            await randomSleep(1000, 2000); // Збільшив затримку для безпеки
         } catch (e) {
-            if (attempt < ACC_POOL.length) {
-                console.log(`⚠️ Error getting followers (attempt ${attempt + 1}), rotating...`);
-                rotateAccount();
-                if (e.response && (e.response.status === 401 || e.response.status === 403 || e.response.status === 429)) {
-                    attempt++;
-                    continue;
-                }
-            }
+            console.error(`Error getting followers: ${e.message}`);
             hasMore = false;
         }
     }
@@ -445,15 +384,9 @@ const getAllFollowing = async (id, limitAmount, attempt = 0, onProgress = null) 
 
             hasMore = response.data.has_more;
             next_max_id = response.data.next_max_id;
-            await randomSleep(500, 1200);
+            await randomSleep(1000, 2000);
         } catch (e) {
-            if (attempt < ACC_POOL.length) {
-                if (e.response && (e.response.status === 401 || e.response.status === 403 || e.response.status === 429)) {
-                    rotateAccount();
-                    attempt++;
-                    continue;
-                }
-            }
+            console.error(`Error getting following: ${e.message}`);
             hasMore = false;
         }
     }
@@ -523,14 +456,6 @@ const getUsersByHashtag = async (tag, limitAmount, attempt = 0, onProgress = nul
 
         } catch (e) {
             console.error(`❌ Помилка парсингу хештегу ${tag}:`, e.message);
-            
-            if (attempt < ACC_POOL.length) {
-                if (e.response && (e.response.status === 401 || e.response.status === 403 || e.response.status === 429)) {
-                    console.log(`⚠️ Hashtag parsing error (attempt ${attempt + 1}), rotating...`);
-                    rotateAccount();
-                    return getUsersByHashtag(tag, limitAmount, attempt + 1, onProgress);
-                }
-            }
             hasMore = false; 
             break;
         }
@@ -551,24 +476,10 @@ const getReels = async (userId, { after = null, first = 7, pageSize = 2 } = {}, 
             dpr: '2',
             __ccg: 'GOOD',
             __rev: '1029645341',
-            __s: 'vj1axo:f39icq:b7q9h8',
-            __hsi: '7571145547497363938',
-            __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2iyo5m263ifK0EUjwGzEaE2iwNwmE7G4-5o4q3y1Sw62wLyESE7i3vwDwHg2ZwrUdUbGwmk0zU8oC1Iwqo5p0OwUQp1yUb8jK5V89F8uwm8jxK2K2G0EoKmUhw4rwXyEcE4ei16wAw',
-            __csr: 'g9Y4AICG79MPfd5Hlnf6AlPOPnAjVqvHb-AQSiSayp8hBqhWAF4lWAtemRGlfWjGVCaO4SnvLF7yGjzUhUOiuuEKehuVH-QidyqyOpriXV-h2USZanK2i6ippAqifCgTHKb_xfAy9ojF7GEW8xijtAKqF9HCiAxO8AwFjz4V9QiUuxmdJet6zoG49o-8DwiE01oZoSaK7A1jgbE5Rw23VDg8bwdhfVda4agmw2we2C0zoaWgrxq0pW0eBweWE0-WEjg1XA264jwBwhZ1-p0Cx68Q0JojwJxe0sKpa1vxK3K5Q1YwcK48z80jwi0hK0FbOo4hw3MMCEalCwyhD406dxO7806dK0eEway0W80HJw2hU0d284u',
-            __hsdp: 'geQ6AGY4VWAk4MaiJi6CHni4H9yjbywjeh9344UYsdxyEabe9da1q53y5B40gETmUyERy9E4pyi6wmUJBx51GA8xGEgpO2FEnwnp8iiyzw9a2-12w-zE5i9zE5q5bw8-10yVEGvwwxXxG32323OdwIxC2Wi0r-0kGq0oS1cwPw5Zw4wBwr8bo6e7o6G1bw6cwcm1Qw22o622x05_wk8fo5gw32xm0DE',
-            __hblp: '0vEfE26z8fUO0To2SwFzo8Ed8uzE4KUKdwLmp1S6d39e5Uqw_mifgKewJwo9Epy9oK3p0ZzEgx-m6SvzEW698aok-0z5wGxmVuqaDU88S4ebzEc8c8f8S2iu6odo2Rwxwem0AE2TCCw66wj8cU9829wa-7EfE3jzpo6O2S3y2G48O363y1bxu781lU35wt86a0qq7EaEmK2h2Elw820w85uQay8gyUvwZCwNK5O1e484rwl8lwn846',
-            __sjsp: 'geQ65OHOgh7Ghgj0F8hi6CHni4H9yjbywjehadg8NMS6awIxt0n1g',
-            __comet_req: '7',
-            fb_dtsg: 'NAfvUDaiJyFYbA47EW4SWF2hyqrpiw4h0ex6tdXjlP3Eo0nTAtF9tJQ:17864970403026470:1744117021',
+            fb_dtsg: 'NAft2vrU9tXgRSNVV0D_i_ralk2AzRL_Akiom9vq0o_kQSRbSxPrPvw:17864970403026470:1744117021',
+            lsd: ACC_POOL[currentAccIndex].lsd,
             jazoest: '26265',
-            lsd: 'mzId0ZjTQCzWXqrpB2fKO_',
-            __spin_r: '1029645341',
-            __spin_b: 'trunk',
-            __spin_t: '1762794691',
-            __crn: 'comet.igweb.PolarisProfileReelsTabRoute',
-            fb_api_caller_class: 'RelayModern',
-            fb_api_req_friendly_name: 'PolarisProfileReelsTabContentQuery_connection',
-            server_timestamps: 'true',
+            doc_id: '9905035666198614',
             variables: JSON.stringify({
                 after: after,
                 before: null,
@@ -579,8 +490,7 @@ const getReels = async (userId, { after = null, first = 7, pageSize = 2 } = {}, 
                 },
                 first: first,
                 last: null
-            }),
-            doc_id: '9905035666198614'
+            })
         };
 
         const response = await axios.post(
@@ -596,21 +506,22 @@ const getReels = async (userId, { after = null, first = 7, pageSize = 2 } = {}, 
             }
         );
 
-        return response.data.data.xdt_api__v1__clips__user__connection_v2.edges.reduce((acc, edge) => {
+        const edges = response.data?.data?.xdt_api__v1__clips__user__connection_v2?.edges;
+
+        if (!edges) return [];
+
+        return edges.reduce((acc, edge) => {
             const media = edge.node.media;
-            if (media.clips_tab_pinned_user_ids.length) {
+            if (media.clips_tab_pinned_user_ids && media.clips_tab_pinned_user_ids.length) {
                 return acc;
             }
 
             acc.push(media.play_count);
             return acc;
         }, []).slice(0, 7);
+
     } catch (e) {
-        if (attempt < ACC_POOL.length) {
-            rotateAccount();
-            return getReels(userId, { after, first, pageSize }, attempt + 1);
-        }
-        throw e;
+        return [];
     }
 }
 
@@ -626,23 +537,10 @@ const getPosts = async (username, { count = 12, includeReelMediaSeenTimestamp = 
             dpr: '2',
             __ccg: 'MODERATE',
             __rev: '1029645341',
-            __s: 'gkgx7w:42ca4h:z972uj',
-            __hsi: '7571169926051092580',
-            __dyn: '7xeUjG1mxu1syUbFp41twpUnwgU7SbzEdF8aUco2qwJxS0DU2wx609vCwjE1EE2Cw8G11wBz81s8hwGxu786a3a1YwBgao6C0Mo2swlo8od8-U2zxe2GewGw9a361qwuEjUlwhEe87q0oa2-azqwt8d-2u2J0bS1LwTwKG1pg2fwxyo6O1FwlA3a3zhA6bwIxeUnAwCAxW1oxe6UaU3cyVrx60hK16wOwgV84q2i',
-            __csr: 'g9Yr7jOOqFNisl7vZWn9HGAz9WFAFGQJszChoxKh-WACy6598hBqyaAGlvGmAVrmFpfF6KpyIxdBTXWhUGAU-4ucADDGbzAnKq_J1a9Gb9BJbK9Cz8SZanK3UCmp6AzVAdWXy_UjV8ym4WhWGey8kCtAKqF9EFai78S2B11eit4K7ElzrjDhES6Vo-8Dw05B0zoGUug5d0Kwnm08fCt0wK0R4_AQEgF1q0a0Uao2dwKgrxq0pW0eBweWE0-WEjg1XA264jwBwhZ1-p0Cx68Q0JojwJxe0sKuE5-6UeUng7O0OUgycw1e1816U2AL9wh60f32qwFmq296sg0oS78sw0oSU0Wy0G83Ew2KS097w0Q8whU',
-            __hsdp: 'geQ6AGY4VWAk4MaiJi6CHni4H9yjbywjeh9344UYsdxyEabe9da1q53y5B40gETmUyERy9E4pyi6wmUJBx51GA8xGEgpO2FEnwnp8iiyzw9a2-12w-zE5i9zE5q5bw8-10yVEGvwwxXxG32323OdwIxC2Wi0r-0kGq0oS1cwPw5Zw4wBwr8bo6e7o6G1bw6cwcm1Qw22o622x05_wk8fo5gw32xm0DE',
-            __hblp: '0vEfE26z8fUO0To2SwFzo8Ed8uzE4KUKdwLmp1S6d39e5Uqw_mifgKewJwo9Epy9oK3p0ZzEgx-m6SvzEW698aok-0z5wGxmVuqaDU88S4ebzEc8c8f8S2iu6odo2Rwxwem0AE2TCCw66wj8cU9829wa-7EfE3jzpo6O2S3y2G48O363y1bxu781lU35wt86a0qq7EaEmK2h2Elw820w85uQay8gyUvwZCwNK5O1e484y1kxm1swgo',
-            __sjsp: 'geQ65OHOgh7Ghgj0F8hi6CHni4H9yjbywjehadg8NMS6awIxt0n1g',
-            __comet_req: '7',
-            fb_dtsg: 'NAftOiTjchy2lfmwzberNk3v_oULJxNhIomtC98mJQ1N_NnAZr3fNnA:17864970403026470:1744117021',
+            fb_dtsg: 'NAft2vrU9tXgRSNVV0D_i_ralk2AzRL_Akiom9vq0o_kQSRbSxPrPvw:17864970403026470:1744117021',
+            lsd: ACC_POOL[currentAccIndex].lsd,
             jazoest: '26525',
-            lsd: '8ZETyCAtEkQCVF8qwhGudE',
-            __spin_r: '1029645341',
-            __spin_b: 'trunk',
-            __spin_t: '1762800367',
-            fb_api_caller_class: 'RelayModern',
-            fb_api_req_friendly_name: 'PolarisProfilePostsQuery',
-            server_timestamps: 'true',
+            doc_id: '24937007899300943',
             variables: JSON.stringify({
                 data: {
                     count: count,
@@ -653,8 +551,7 @@ const getPosts = async (username, { count = 12, includeReelMediaSeenTimestamp = 
                 },
                 username: username,
                 __relay_internal__pv__PolarisIsLoggedInrelayprovider: true
-            }),
-            doc_id: '24937007899300943'
+            })
         };
 
         const response = await axios.post(
@@ -670,14 +567,11 @@ const getPosts = async (username, { count = 12, includeReelMediaSeenTimestamp = 
             }
         );
 
-        const edges = response.data.data.xdt_api__v1__feed__user_timeline_graphql_connection.edges;
+        const edges = response.data?.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges;
+        if (!edges) return '';
         return edges.map((edge) => edge.node.caption?.text || '').filter(Boolean).join(', ');
     } catch (e) {
-        if (attempt < ACC_POOL.length) {
-            rotateAccount();
-            return getPosts(username, { count }, attempt + 1);
-        }
-        throw e;
+        return '';
     }
 }
 
@@ -691,74 +585,26 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
 
     console.log(`🔄 Starting to process ${Math.min(ids.length, limitAmount)} users with concurrency: ${CONCURRENCY_LIMIT}`);
 
-    // Перевірка що limit ініціалізовано
-    if (typeof limit !== 'function') {
-        console.error('❌ pLimit is not initialized! Using sequential processing...');
-        
-        // Послідовна обробка як запасний варіант
-        for (let i = 0; i < Math.min(ids.length, limitAmount); i++) {
-            try {
-                const id = ids[i];
-                const user = await getUserById(id);
-                if (!user) continue;
-
-                const followerCount = user.follower_count || 0;
-                const isPrivate = user.is_private || false;
-
-                if (followerCount < min || followerCount > max || isPrivate) {
-                    continue;
-                }
-
-                const username = user.username || 'N/A';
-                const fullName = user.full_name || 'N/A';
-                const biography = user.biography || '';
-
-                const reelsViews = await getReels(id);
-                const avgReelsViews = reelsViews.length > 0 
-                    ? Math.round(reelsViews.reduce((a, b) => a + b, 0) / reelsViews.length) 
-                    : 0;
-
-                const postsText = await getPosts(username);
-                const email = extractEmail(postsText) || extractEmail(biography);
-
-                const result = {
-                    username,
-                    fullName,
-                    followers: followerCount,
-                    avgReelsViews,
-                    rawAverage: avgReelsViews,
-                    email,
-                    language: detectAll(biography || postsText)[0]?.lang || 'uk',
-                    profile_pic_url: user.profile_pic_url || null
-                };
-
-                results.push(result);
-                processed++;
-                
-                if (progressCallback) {
-                    progressCallback(processed, Math.min(ids.length, limitAmount), username);
-                }
-
-                await randomSleep(800, 1500);
-                
-            } catch (e) {
-                console.error(`❌ Error processing user ${ids[i]}:`, e.message);
-            }
-        }
-        return results;
-    }
-
     // Нормальна обробка з pLimit
     const promises = ids.slice(0, limitAmount).map(id => 
         limit(async () => {
             try {
+                // Додаємо випадкову затримку перед кожним потоком, щоб вони не били в сервер одночасно
+                await randomSleep(100, 2000);
+
                 const user = await getUserById(id);
-                if (!user) return null;
+                if (!user) {
+                    processed++;
+                    if (progressCallback) progressCallback(processed, Math.min(ids.length, limitAmount), 'Skipped');
+                    return null;
+                }
 
                 const followerCount = user.follower_count || 0;
                 const isPrivate = user.is_private || false;
 
                 if (followerCount < min || followerCount > max || isPrivate) {
+                    processed++;
+                    if (progressCallback) progressCallback(processed, Math.min(ids.length, limitAmount), 'Skipped');
                     return null;
                 }
 
@@ -766,6 +612,7 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                 const fullName = user.full_name || 'N/A';
                 const biography = user.biography || '';
 
+                await randomSleep(500, 1000); 
                 const reelsViews = await getReels(id);
                 const avgReelsViews = reelsViews.length > 0 
                     ? Math.round(reelsViews.reduce((a, b) => a + b, 0) / reelsViews.length) 
@@ -797,6 +644,7 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
                 
             } catch (e) {
                 console.error(`❌ Error processing user ${id}:`, e.message);
+                processed++; 
                 return null;
             }
         })
@@ -1087,19 +935,15 @@ const sendTrackerReport = async (chatId) => {
                 message_id: progressMsg.message_id
             });
 
-            // Отримуємо масив переглядів (наприклад, за різні дати) для цього відео
-            // Якщо getReelMetricsWithLikes повертає лише одне число, обгортаємо у масив
             let metricsArr = await getReelMetricsWithLikes(url);
             let viewsArr = [];
             if (Array.isArray(metricsArr)) {
-                // Якщо повертається масив об'єктів з views
                 viewsArr = metricsArr.map(m => m.views || 0).filter(v => typeof v === 'number');
             } else if (metricsArr && typeof metricsArr.views === 'number') {
                 viewsArr = [metricsArr.views];
             } else {
                 viewsArr = [0];
             }
-            // Сума всіх переглядів
             const totalViews = viewsArr.reduce((a, b) => a + b, 0);
 
             let status = 'Успішно';
@@ -1137,9 +981,7 @@ const sendTrackerReport = async (chatId) => {
 
     await bot.deleteMessage(chatId, progressMsg.message_id);
 
-    // Завжди створюємо файл, навіть якщо дані не отримані
     try {
-        // Додаємо статистику
         worksheet.addRow({});
         const statsRow = worksheet.addRow({
             date: 'СТАТИСТИКА',
@@ -1453,7 +1295,7 @@ function handleParsingSteps(msg) {
                     `📊 Тип: **${typeText}**\n\n` +
                     `✍️ *Крок 2/2*\n` +
                     `Вкажіть **мінімальну** кількість підписників для знайдених юзерів (напр. 1000):`,
-                                       { parse_mode: 'Markdown' });
+                                     { parse_mode: 'Markdown' });
                 break;
 
             case 'min_followers':
