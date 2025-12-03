@@ -23,7 +23,7 @@ const REELS_DB_FILE = path.join(DATA_DIR, 'reels_db.json');
 // НАЛАШТУВАННЯ ПАРСИНГУ
 const DEFAULT_LIMIT = 1300;
 const DEFAULT_MAX_FOLLOWERS = 1000000000;
-const CONCURRENCY_LIMIT = 3; // Зменшив до 3 для стабільності на одному акаунті
+const CONCURRENCY_LIMIT = 3;
 
 // ==========================================
 // 🍪 ACCOUNT POOL & ROTATION LOGIC
@@ -31,15 +31,13 @@ const CONCURRENCY_LIMIT = 3; // Зменшив до 3 для стабільно�
 
 const ACC_POOL = [
     {
-        // ВАШ РОБОЧИЙ АКАУНТ (СВІЖІ ДАНІ)
+        // ВАШ РОБОЧИЙ АКАУНТ
         id: '12137273349',
-        username: 'melanymusillo_acc', // Ім'я для логів
-        // Ваші свіжі куки з попереднього кроку
+        username: 'melanymusillo_acc',
         cookie: 'csrftoken=1a3uEzakx-3LiE5qfIQ-YN; datr=hn4vaVNq7MvdM94ZbdvOhbZb; ig_did=56C6F218-D328-43A3-9264-89695460572B; wd=1920x179; mid=aS9-hgALAAF9yrgaqeWgw5Y-Dwot; sessionid=12137273349%3AIcqM72BpZRoq3J%3A4%3AAYiNZ8KVovyAqQQAmYBFYjjHwq1wZDmj9rpSenHkmw; ds_user_id=12137273349; rur="RVA\\05412137273349\\0541796257258:01fe410223a58fa7e457d83584afc520f3f9e3c703f2d801efba0bc86084552917333abb"',
         csrftoken: '1a3uEzakx-3LiE5qfIQ-YN',
-        lsd: 'B-2Of-xMV_X3_Sv3LeBr4M' // Додав LSD
+        lsd: 'B-2Of-xMV_X3_Sv3LeBr4M'
     }
-    // Можна додати інші акаунти сюди за тим же шаблоном
 ];
 
 let currentAccIndex = 0;
@@ -64,11 +62,10 @@ const getAuthHeaders = () => {
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
-        // Використовуємо User-Agent для Windows/Firefox як у вас
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0',
         'x-asbd-id': '359341',
         'x-csrftoken': acc.csrftoken,
-        'x-fb-lsd': acc.lsd || 'B-2Of-xMV_X3_Sv3LeBr4M', // Фолбек якщо немає в об'єкті
+        'x-fb-lsd': acc.lsd || 'B-2Of-xMV_X3_Sv3LeBr4M',
         'x-ig-app-id': '936619743392459',
     };
 };
@@ -211,7 +208,6 @@ const randomSleep = (min, max) => sleep(Math.floor(Math.random() * (max - min + 
 // 📡 INSTAGRAM API (COMMON)
 // ==========================================
 
-// ✅ ОНОВЛЕНО: Стабільний REST API метод
 const getUserById = async (id, attempt = 0) => {
     try {
         const response = await axios.get(
@@ -222,25 +218,23 @@ const getUserById = async (id, attempt = 0) => {
         );
 
         if (!response.data || !response.data.user) {
-            // console.log(`Debug Info for ${id}:`, response.data);
             throw new Error('User not found in response');
         }
 
         return response.data.user;
 
     } catch (e) {
-        // Ігноруємо 404 (юзер не знайдений/видалений)
         if (e.response && e.response.status === 404) {
             return null;
         }
 
-        if (attempt < ACC_POOL.length - 1) { // -1 бо у нас поки один робочий акк
+        if (attempt < ACC_POOL.length - 1) {
             console.log(`⚠️ getUserById failed for ${id} (Status: ${e.response?.status}), rotating...`);
             rotateAccount();
             return getUserById(id, attempt + 1);
         }
         
-        return null; // Просто пропускаємо проблемного юзера
+        return null;
     }
 }
 
@@ -254,8 +248,6 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
             });
         };
 
-        // Замінив fb_dtsg на значення з вашого логу, хоча воно швидко змінюється
-        // Зазвичай для пошуку це не критично, але для надійності
         const body = {
             av: getCurrentAccId(),
             __d: 'www',
@@ -305,7 +297,6 @@ const getUserIdFromUsername = async (username, attempt = 0) => {
 
         const result = searchResults.find(u => u.user?.username?.toLowerCase() === username.toLowerCase());
         if (!result) {
-            // Fallback: беремо першого, якщо точного збігу немає
             return searchResults[0].user.id;
         }
 
@@ -347,7 +338,7 @@ const getAllFollowers = async (id, limitAmount, attempt = 0, onProgress = null) 
 
             hasMore = response.data.has_more;
             next_max_id = response.data.next_max_id;
-            await randomSleep(1000, 2000); // Збільшив затримку для безпеки
+            await randomSleep(1000, 2000); 
         } catch (e) {
             console.error(`Error getting followers: ${e.message}`);
             hasMore = false;
@@ -585,11 +576,9 @@ const mapFollowers = async ({ ids, limit: limitAmount, min, max }, progressCallb
 
     console.log(`🔄 Starting to process ${Math.min(ids.length, limitAmount)} users with concurrency: ${CONCURRENCY_LIMIT}`);
 
-    // Нормальна обробка з pLimit
     const promises = ids.slice(0, limitAmount).map(id => 
         limit(async () => {
             try {
-                // Додаємо випадкову затримку перед кожним потоком, щоб вони не били в сервер одночасно
                 await randomSleep(100, 2000);
 
                 const user = await getUserById(id);
@@ -659,7 +648,6 @@ const saveToXlsx = async (data, username) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Results');
 
-        // Set column headers according to your desired structure
         worksheet.columns = [
             { header: 'Profile Picture', key: 'profile_pic', width: 15 },
             { header: 'Username', key: 'username', width: 20 },
@@ -671,10 +659,8 @@ const saveToXlsx = async (data, username) => {
             { header: 'Languages', key: 'languages', width: 30 }
         ];
 
-        // Set row height for image rows
         worksheet.getRow(1).height = 100;
 
-        // Add data rows
         for (let i = 0; i < data.length; i++) {
             const item = data[i];
             const row = worksheet.addRow({
@@ -687,10 +673,8 @@ const saveToXlsx = async (data, username) => {
                 languages: item.language || ''
             });
 
-            // Set row height for image rows
             row.height = 100;
 
-            // Download and add profile picture if available
             if (item.profile_pic_url) {
                 try {
                     const imageResponse = await axios.get(item.profile_pic_url, {
@@ -699,7 +683,6 @@ const saveToXlsx = async (data, username) => {
                     });
                     const imageBuffer = Buffer.from(imageResponse.data);
                     
-                    // Determine image extension
                     let imageExtension = 'jpeg';
                     const contentType = imageResponse.headers['content-type'];
                     if (contentType?.includes('png')) {
@@ -710,13 +693,11 @@ const saveToXlsx = async (data, username) => {
                         imageExtension = 'webp';
                     }
 
-                    // Add image to workbook
                     const imageId = workbook.addImage({
                         buffer: imageBuffer,
                         extension: imageExtension,
                     });
 
-                    // Insert image into cell
                     worksheet.addImage(imageId, {
                         tl: { col: 0, row: i + 1 },
                         br: { col: 1, row: i + 2 },
@@ -728,7 +709,6 @@ const saveToXlsx = async (data, username) => {
             }
         }
 
-        // Save with username as filename
         const safeFilename = `${username}.xlsx`.replace(/[^a-zA-Z0-9._-]/g, '_');
         await workbook.xlsx.writeFile(safeFilename);
         console.log(`✅ Saved ${data.length} results to ${safeFilename}`);
@@ -754,7 +734,6 @@ const getReelMetricsWithLikes = async (url, attempt = 0) => {
         const shortcode = match[1];
         console.log(`🔍 Fetching metrics for reel: ${shortcode}`);
 
-        // GraphQL метод (без cookies)
         try {
             const graphqlUrl = new URL(`https://www.instagram.com/api/graphql`);
             graphqlUrl.searchParams.set("variables", JSON.stringify({ shortcode: shortcode }));
@@ -796,14 +775,12 @@ const getReelMetricsWithLikes = async (url, attempt = 0) => {
         } catch (graphqlError) {
             console.log(`⚠️ GraphQL method failed: ${graphqlError.message}`);
             
-            // Спроба альтернативного doc_id
             if (attempt === 0) {
                 console.log('🔄 Trying alternative GraphQL query...');
                 return getReelMetricsWithLikes(url, 1);
             }
         }
 
-        // Альтернативний GraphQL метод
         try {
             const graphqlUrl2 = new URL(`https://www.instagram.com/api/graphql`);
             graphqlUrl2.searchParams.set("variables", JSON.stringify({ 
@@ -847,7 +824,6 @@ const getReelMetricsWithLikes = async (url, attempt = 0) => {
             console.log(`⚠️ Alternative GraphQL failed: ${graphqlError2.message}`);
         }
 
-        // Резервний метод через Magic Parameters (з cookies)
         try {
             const response3 = await axios.get(`https://www.instagram.com/p/${shortcode}/?__a=1&__d=dis`, {
                 headers: {
@@ -1420,6 +1396,31 @@ bot.on('message', async (msg) => {
         case '🆔 Мій ID':
              bot.sendMessage(chatId, `🆔 <code>${chatId}</code>`, { parse_mode: 'HTML' });
              break;
+
+        // ✅ ДОДАНО: ОБРОБКА КНОПКИ ДОВІДКА
+        case '📚 Довідка':
+             bot.sendMessage(chatId,
+                `📚 <b>Гайд SAMIParser</b>\n\n` +
+                `<b>Як користуватися:</b>\n` +
+                `1️⃣ Натисніть /start щоб почати\n` +
+                `2️⃣ Оберіть тип парсингу (підписники, підписки або хештег)\n` +
+                `3️⃣ Введіть нікнейми або хештеги через кому\n` +
+                `4️⃣ Вкажіть мінімальну кількість підписників\n` +
+                `5️⃣ Бот надішле файл з результатами\n\n` +
+                `<b>📹 Трекер Reels:</b>\n` +
+                `1️⃣ Натисни "📹 Трекер Reels"\n` +
+                `2️⃣ Додай посилання на відео\n` +
+                `3️⃣ Натисни "Оновити та скачати Excel"\n\n` +
+                `<b>Доступні команди:</b>\n` +
+                ` /start - Почати роботу\n` +
+                ` /help - Цей гайд\n` +
+                ` /id - Показати ваш Chat ID\n` +
+                ` /admin - Адмін-панель\n\n` +
+                `<b>Потрібна допомога?</b>\n` +
+                `Напишіть адміністратору.`,
+                { parse_mode: 'HTML' }
+            );
+            break;
     }
 });
 
