@@ -1,0 +1,12 @@
+{
+  "concurrencyLimit": 2,
+  "hashtagConcurrencyLimit": 1,
+  "requestLimitBeforeRotation": 15,
+  "delaySettings": {
+    "minimumDelay": 1000,
+    "maximumDelay": 2500,
+    "hashtagMinimumDelay": 2000,
+    "hashtagMaximumDelay": 4000,
+    "betweenBatchesDelay": 3000
+  }
+}

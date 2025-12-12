@@ -1,23 +1,37 @@
 {
-  "name": "samiparser-pro",
-  "version": "2.0.0",
-  "description": "Robust Instagram Parser Bot",
-  "main": "index.js",
+  "name": "sami-parser-bot",
+  "version": "1.0.0",
+  "description": "Telegram бот для парсингу Instagram",
   "type": "module",
+  "main": "bot.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "encrypt-cookies": "node -e \"import('./instagramApiCore.js').then(m => m.encryptCookies()).catch(e => console.error(e))\""
   },
+  "keywords": [
+    "telegram",
+    "bot",
+    "instagram",
+    "parser",
+    "scraper"
+  ],
+  "author": "SAMIParser",
+  "license": "MIT",
   "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
     "axios": "^1.6.0",
     "exceljs": "^4.4.0",
-    "googleapis": "^166.0.0",
-    "node-cron": "^4.2.1",
-    "node-telegram-bot-api": "^0.64.0",
-    "p-limit": "^5.0.0",
-    "tinyld": "^1.3.4",
-    "xlsx": "^0.18.5"
+    "tinyld": "^1.3.1",
+    "p-limit": "^4.0.0",
+    "dotenv": "^16.3.0",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": "18.x"
+    "node": ">=18.0.0"
   }
 }
